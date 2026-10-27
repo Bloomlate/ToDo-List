@@ -219,7 +219,6 @@ input,select,textarea{font:inherit;color:inherit}
 .cbox{background:color-mix(in srgb,var(--text) 5%,var(--bg));border-radius:16px;padding:12px 6px;margin-top:12px}
 .tchip{aspect-ratio:1;border-radius:32%;position:relative;border:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
 .tck{position:absolute;right:-5px;bottom:-5px;width:22px;height:22px;border-radius:50%;background:#1e90ff;color:#fff;border:2px solid var(--bg);display:grid;place-items:center}
-.tcrown{position:absolute;right:-2px;bottom:-2px}
 .tg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 2px}
 .ttex{aspect-ratio:1/1.04;border-radius:12px;position:relative;border:1px solid var(--line);background-size:200px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:12%}
 .ttex i{width:26px;height:26px;border-radius:50%;background:rgba(150,150,150,.28);display:grid;place-items:center}
@@ -439,58 +438,48 @@ const fElapsed = () => F.base + (F.running ? (Date.now() - F.t0) / 1000 : 0);
 const fStarted = () => F.running || (F.mode === 'timer' ? F.left < F.dur * 60 : F.base > 0);
 
 /* ---------- 테마 ---------- */
-const CROWN = (n = 16) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" fill="#f4b73c"/></svg>`;
 const COLORS = [['파랑', '#0a8cff'], ['분홍', '#ff6b9d'], ['청록', '#1a9e8f'], ['먹색', '#3a3a44'], ['빨강', '#d93636'], ['노랑', '#f2b13e'], ['초록', '#0a8a5c'], ['주황', '#ff7a1a'], ['보라', '#8b4dff']];
 const svgU = s => "url('data:image/svg+xml;utf8," + encodeURIComponent(s).replace(/'/g, '%27') + "')";
 const tex = (base, f, seed) => svgU(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="f"><feTurbulence type="fractalNoise" baseFrequency="${f}" numOctaves="3" seed="${seed}"/><feColorMatrix values="0 0 0 0 .45 0 0 0 0 .4 0 0 0 0 .35 0 0 0 .22 0"/></filter><rect width="200" height="200" fill="${base}"/><rect width="200" height="200" filter="url(#f)"/></svg>`);
 const TEX = [['#fbfbf8', .55, '#5b8def', 1], ['#f4efe6', .9, '#e05a5a', 2], ['#f1f3fb', .45, '#8c5ad8', 3], ['#f6f6f4', 1.3, '#1f9a74', 4]].map(([b, f, c, n]) => [tex(b, f, n), c]);
-const mk = (cols, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" preserveAspectRatio="xMidYMax slice"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">${cols.map((c, i) => `<stop offset="${i / (cols.length - 1)}" stop-color="${c}"/>`).join('')}</linearGradient></defs><rect width="200" height="120" fill="url(#g)"/>${body}</svg>`;
-const C = (x, y, r, c, o = 1) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" opacity="${o}"/>`;
-const E = (x, y, rx, ry, c, o = 1) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${c}" opacity="${o}"/>`;
-const R = (x, y, w, h, c, rx = 0, o = 1) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${c}" opacity="${o}"/>`;
-const M = (pts, c, o = 1) => `<polygon points="${pts}" fill="${c}" opacity="${o}"/>`;
-const HL = (y, c, a = 8, o = 0) => `<path d="M0 ${y}Q${50 + o} ${y - a} 100 ${y}T200 ${y}V120H0Z" fill="${c}"/>`;
-const PN = (x, y, s, c) => M(`${x},${y - 16 * s} ${x + 6 * s},${y} ${x - 6 * s},${y}`, c);
-const CL = (x, y, s, c = '#fff', o = .9) => C(x, y, 6 * s, c, o) + C(x + 7 * s, y + 2 * s, 5 * s, c, o) + C(x - 7 * s, y + 2 * s, 4.5 * s, c, o) + R(x - 11 * s, y + 2 * s, 22 * s, 5 * s, c, 2 * s, o);
-const ST = (n, s) => [...Array(n)].map((_, i) => C((i * 97 + i * i * 13 + s * 53) % 200, (i * 53 + i * i * 7 + s * 29) % 62, i % 3 ? .6 : 1, '#fff', .8)).join('');
-const BLD = (x, w, h, c) => R(x, 100 - h, w, h, c) + R(x + 2, 104 - h, w - 4, 2, '#fff', 0, .5) + R(x + 2, 110 - h, w - 4, 2, '#fff', 0, .5);
-/* [id, 이름, 어두운 배경 여부, 포인트 색, SVG] — 직접 그린 일러스트 */
+/* [id, 이름, 어두운 배경 여부, 포인트 색, 사진 파일, 위쪽 평균색] — 실제 사진(출처는 CREDITS.md) */
 const SCN = [
-  ['bridge', '노을 다리', 0, '#e0568a', mk(['#5b6fd6', '#ee8fb5', '#ffc58a'], C(70, 78, 11, '#fff1c0') + M('0,84 35,64 75,84', '#6a5aa5') + R(0, 82, 200, 38, '#e58bb2') + R(0, 92, 200, 28, '#b873b5', 0, .5) + R(122, 46, 4, 50, '#d8473a') + R(168, 50, 4, 46, '#d8473a') + R(100, 70, 100, 3, '#d8473a') + '<path d="M124 48Q146 72 170 52M100 71Q112 62 124 48" stroke="#d8473a" fill="none" stroke-width="1.2"/>')],
-  ['road', '밤 산길', 1, '#6c78ff', mk(['#1b1f4a', '#3a3f7a'], ST(40, 1) + HL(80, '#2d3163', 10) + HL(96, '#23264f', 8) + PN(20, 92, 1.6, '#151838') + PN(180, 90, 1.8, '#151838') + '<path d="M60 120Q100 100 150 90" stroke="#4a4f8c" stroke-width="7" fill="none"/>')],
-  ['lighthouse', '등대', 0, '#1d9fe0', mk(['#9fdcf5', '#5ec3ee', '#37a9e6'], CL(40, 22, 1.2) + CL(150, 30, 1) + R(0, 62, 200, 58, '#3aaee8', 0, .9) + E(150, 92, 40, 8, '#6b8fa0') + R(94, 40, 12, 38, '#fff') + R(92, 35, 16, 6, '#e0453b') + R(96, 56, 8, 5, '#e0453b') + E(100, 80, 18, 5, '#7fa0b0'))],
-  ['sakura', '벚꽃 공원', 0, '#f06a95', mk(['#fde4e6', '#fbd0da'], HL(84, '#b9c9a4', 8) + '<path d="M40 120Q80 92 120 100T200 92" stroke="#7fb0e0" stroke-width="7" fill="none"/>' + [[30, 70, 16], [60, 78, 12], [150, 66, 18], [180, 76, 13], [100, 84, 10]].map(([x, y, r]) => C(x, y, r, '#f6a9c0') + C(x + 4, y - 3, r * .6, '#fbc5d6')).join(''))],
-  ['astro', '우주인', 1, '#6c7a99', mk(['#000', '#16161e'], ST(50, 2) + C(25, 120, 55, '#4a4a52') + C(140, 70, 12, '#0a0a0e') + '<path d="M120 70h40" stroke="#555" stroke-width=".4"/>' + C(60, 45, 7, '#fff') + R(53, 52, 14, 18, '#eee', 5) + R(66, 44, 3, 14, '#eee', 1.5) + R(50, 68, 7, 14, '#ddd', 3) + R(60, 68, 7, 14, '#ddd', 3))],
-  ['sunflower', '해바라기', 0, '#f0a81d', mk(['#cdeafc', '#e6f5fd'], CL(150, 24, 1.3) + HL(86, '#7fcf6a', 10) + HL(102, '#4faa55', 8) + [[55, 62], [85, 52], [118, 66]].map(([x, y]) => `<path d="M${x} ${y}V100" stroke="#2f8a3a" stroke-width="2"/>` + C(x, y, 8, '#f5b82e') + C(x, y, 3.5, '#7a4a1a')).join(''))],
-  ['clouds', '구름', 0, '#2f8fe8', mk(['#4aa6f0', '#9ad4f7', '#d6efff'], CL(40, 80, 2.4) + CL(130, 92, 2.8) + CL(170, 50, 1.6) + CL(60, 36, 1.4) + M('100,52 120,58 104,60', '#fff'))],
-  ['bear', '곰인형', 0, '#e8798f', mk(['#fff0f3', '#ffe2e8'], C(100, 58, 40, '#ffd0da') + E(100, 82, 20, 17, '#c9895a') + C(100, 52, 15, '#d9985f') + C(88, 40, 5.5, '#d9985f') + C(112, 40, 5.5, '#d9985f') + C(95, 51, 1.4, '#3a2a20') + C(105, 51, 1.4, '#3a2a20') + E(100, 57, 4, 3, '#f1cfae') + R(86, 64, 28, 6, '#7aa7d8', 3) + E(100, 102, 34, 4, '#fff', .8))],
-  ['telescope', '천체망원경', 1, '#8a6cf0', mk(['#2a1f66', '#4b3a9a'], ST(20, 3) + CL(170, 24, 1.8, '#5a4aa8', .7) + HL(86, '#1a1550', 12) + HL(100, '#0c0a2e', 8) + '<path d="M118 100L108 62M118 100L128 62M118 100V66" stroke="#0c0a2e" stroke-width="2.4"/><path d="M96 74L128 50" stroke="#0c0a2e" stroke-width="6" stroke-linecap="round"/>' + C(72, 78, 6, '#0c0a2e') + R(66, 84, 12, 24, '#0c0a2e', 4))],
-  ['otter', '수달', 0, '#2bb3e6', mk(['#d8f5f8', '#8fdcf0', '#4cc2e8'], [28, 20, 12].map((r, i) => `<ellipse cx="100" cy="66" rx="${r * 3.2}" ry="${r * 1.3}" fill="none" stroke="#fff" stroke-width="1" opacity="${.9 - i * .25}"/>`).join('') + E(100, 66, 26, 9, '#e9e1d6') + C(124, 62, 8.5, '#f1ebe2') + C(127, 60, 1.2, '#3a2a20') + C(122, 55, 2.4, '#d8cfc2'))],
-  ['polar', '북극곰', 1, '#2bc4b0', mk(['#0b2a4a', '#1b6c7a'], ST(25, 4) + '<path d="M0 40Q60 10 100 30T200 20V0H0Z" fill="#3de0b0" opacity=".35"/>' + HL(82, '#1d4a78', 6) + M('0,120 20,98 90,98 110,120', '#bfe6f8') + M('130,110 150,100 195,100 200,112', '#8ec8ec') + E(62, 90, 11, 14, '#fff') + C(70, 76, 6, '#fff') + E(82, 98, 5, 5, '#fff'))],
-  ['camp', '캠핑', 1, '#f08a3c', mk(['#14204a', '#2b3566', '#a8603a'], ST(25, 5) + M('0,86 40,62 90,84 130,58 200,88 200,120 0,120', '#6b3a3a') + HL(100, '#25193a', 6) + PN(24, 94, 1.8, '#140e26') + PN(170, 92, 2.2, '#140e26') + M('70,104 90,78 110,104', '#f0883a') + M('90,78 96,104 90,104', '#c8601f') + '<path d="M110 120Q150 108 190 118" stroke="#3a6aa0" stroke-width="5" fill="none"/>')],
-  ['moonmt', '달빛 산', 1, '#c58a3e', mk(['#0e2a2e', '#1a4045'], C(150, 30, 4.5, '#aab8b8') + M('0,120 0,86 40,68 80,92 124,60 168,86 200,72 200,120', '#6b4a28') + M('0,120 0,100 50,88 110,104 160,92 200,104 200,120', '#4a3220'))],
-  ['paris', '파리 야경', 1, '#7b6cf0', mk(['#0a1450', '#3a2a9a', '#8b5ad0'], ST(30, 6) + C(30, 26, 6, '#f1edc8') + C(33, 24, 5, '#0a1450') + M('100,14 108,98 92,98', '#d8b04a') + R(88, 62, 24, 3, '#d8b04a') + R(92, 40, 16, 2, '#d8b04a') + C(30, 90, 22, '#10226a') + C(176, 86, 26, '#10226a') + HL(104, '#0a1240', 4) + [[20, 106], [34, 108], [150, 106], [170, 108], [184, 106]].map(([x, y]) => C(x, y, 1.2, '#ffd86a')).join(''))],
-  ['vase', '꽃병', 0, '#f0a21d', mk(['#fff2d4', '#ffe6b8'], M('0,100 200,92 200,120 0,120', '#f5d58a') + R(90, 60, 18, 36, '#f6d44a', 7) + '<path d="M99 60Q80 40 70 30M99 60Q104 36 108 24M99 60Q122 44 130 34" stroke="#4a8a3a" stroke-width="1.6" fill="none"/>' + [[70, 30], [108, 24], [130, 34], [96, 40]].map(([x, y]) => C(x, y, 7, '#f59a2a') + C(x, y, 2.6, '#ffd36a')).join('') + E(140, 98, 10, 3, '#fff') + R(130, 90, 14, 8, '#fff', 3))],
-  ['town', '알록달록 도시', 0, '#e86f6f', mk(['#fdebd8', '#fbe0c8'], BLD(0, 22, 40, '#7cc8c0') + BLD(22, 24, 56, '#ef6f7a') + BLD(46, 22, 44, '#4fb8a0') + BLD(68, 26, 52, '#f5a04a') + BLD(94, 24, 60, '#f9d070') + BLD(118, 22, 46, '#ef6f7a') + BLD(140, 28, 56, '#8ccfc0') + BLD(168, 32, 44, '#f5a04a') + R(0, 100, 200, 20, '#e8d8c8'))],
-  ['beach', '해변', 0, '#f08a2c', mk(['#a8e0fa', '#d6f1fc'], CL(40, 24, 1.2) + R(0, 54, 200, 30, '#2bb0ee') + R(0, 62, 200, 6, '#8fdcf8', 0, .7) + HL(86, '#f9dc9c', 8) + R(0, 100, 200, 20, '#f6d088') + '<path d="M56 100L72 46" stroke="#8a6a50" stroke-width="1.6"/>' + '<path d="M50 56Q70 30 94 54Z" fill="#f08a2c"/><path d="M62 52Q70 38 80 52Z" fill="#fff"/>' + R(120, 96, 22, 4, '#e0453b', 2))],
-  ['desert', '사막', 0, '#d98f20', mk(['#fbe8a8', '#f7d87a'], C(150, 28, 10, '#fff4cf', .8) + HL(66, '#f2c048', 6) + HL(86, '#e8a830', 10, 20) + HL(104, '#d98f20', 8) + R(30, 70, 3, 12, '#4a9a50', 1.5) + R(172, 76, 3, 14, '#4a9a50', 1.5) + [[100, 82], [108, 82], [116, 83]].map(([x, y]) => E(x, y, 3.2, 1.8, '#7a4a20')).join(''))],
-  ['snow', '설원', 0, '#7a78d6', mk(['#b9b8e8', '#dedcf6'], ST(18, 7) + HL(70, '#fff', 12) + HL(92, '#eef0fb', 10, 20) + PN(40, 100, 2, '#2a5a6a') + PN(60, 104, 1.5, '#2a5a6a') + PN(160, 98, 2.2, '#2a5a6a') + R(136, 80, 8, 6, '#6a6aa0'))],
-  ['xmas', '크리스마스', 1, '#d94a4a', mk(['#202a66', '#33408a'], ST(30, 8) + HL(92, '#eef2ff', 8) + M('60,30 76,66 44,66', '#1f7a4a') + M('60,46 82,86 38,86', '#1f7a4a') + M('60,62 90,104 30,104', '#2a8a56') + C(60, 28, 3.4, '#ffd24a') + R(54, 104, 12, 6, '#6a3a20') + R(130, 80, 36, 22, '#d94a4a') + M('126,80 148,64 170,80', '#8a2a3a') + R(144, 88, 8, 14, '#ffd86a') + C(70, 58, 1.4, '#ff6a6a') + C(52, 78, 1.4, '#ffd86a'))],
+  ['bridge', '노을 다리', 0, '#e0568a', 'bridge', '#7a9bb8'],
+  ['road', '밤 산길', 1, '#6c78ff', 'road', '#3c3c50'],
+  ['lighthouse', '등대', 1, '#1d9fe0', 'lighthouse', '#022f6b'],
+  ['sakura', '벚꽃', 0, '#f06a95', 'sakura', '#bba8bc'],
+  ['astro', '별밤', 1, '#6c7a99', 'astro', '#02142a'],
+  ['sunflower', '해바라기', 0, '#f0a81d', 'sunflower', '#216ead'],
+  ['clouds', '구름', 0, '#2f8fe8', 'clouds', '#1a6096'],
+  ['bear', '분홍 하늘', 0, '#e8798f', 'bear', '#e27a93'],
+  ['telescope', '은하수', 1, '#8a6cf0', 'telescope', '#0c1b29'],
+  ['otter', '잔잔한 바다', 0, '#2bb3e6', 'otter', '#fdfffe'],
+  ['polar', '오로라', 1, '#2bc4b0', 'polar', '#153432'],
+  ['camp', '캠핑', 1, '#f08a3c', 'camp', '#234568'],
+  ['moonmt', '달빛 산', 1, '#c58a3e', 'moonmt', '#111417'],
+  ['paris', '노을 실루엣', 1, '#7b6cf0', 'paris', '#3f5154'],
+  ['vase', '고요한 호수', 0, '#f0a21d', 'vase', '#89a6a8'],
+  ['town', '안개 숲', 1, '#e86f6f', 'town', '#dfdfdf'],
+  ['beach', '해변', 0, '#f08a2c', 'beach', '#1e9aca'],
+  ['desert', '사막', 0, '#d98f20', 'desert', '#608bb7'],
+  ['snow', '설원', 0, '#7a78d6', 'snow', '#cdcac8'],
+  ['xmas', '황금빛 바다', 0, '#d94a4a', 'xmas', '#8b99d5'],
 ];
+const scImg = x => `url('images/scene-${x[4]}.jpg')`;
 const SCI = Object.fromEntries(SCN.map(x => [x[0], x]));
-const bgOf = b => b.t === 'scene' && SCI[b.id] ? svgU(SCI[b.id][4]) : b.t === 'tex' && TEX[+b.id] ? TEX[+b.id][0] : b.t === 'custom' && S.customBg ? `url("${S.customBg}")` : '';
+const bgOf = b => b.t === 'scene' && SCI[b.id] ? scImg(SCI[b.id]) : b.t === 'tex' && TEX[+b.id] ? TEX[+b.id][0] : b.t === 'custom' && S.customBg ? `url("${S.customBg}")` : '';
 function applyTheme() {
   const dark = S.theme === 'dark' || (S.theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   const b = S.bg || { t: 'color' }, img = bgOf(b), root = document.documentElement.style;
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   root.setProperty('--primary', S.accent);
   if (!img) { ['--bgimg', '--bgcol'].forEach(k => root.removeProperty(k)); return; }
-  const sdark = b.t === 'scene' && SCI[b.id][2], a = dark ? (sdark ? .1 : b.t === 'tex' ? .9 : .55) : (sdark ? .7 : b.t === 'scene' ? .12 : .35);
+  const sdark = b.t === 'scene' && SCI[b.id][2], a = dark ? (sdark ? .22 : b.t === 'tex' ? .9 : .55) : (sdark ? .7 : b.t === 'scene' ? .3 : .35);
   const ov = dark ? `rgba(10,14,20,${a})` : `rgba(255,255,255,${a})`;
   root.setProperty('--bgimg', `linear-gradient(${ov},${ov}),${img}`);
-  root.setProperty('--bgsize', b.t === 'tex' ? '100% 100%,200px' : b.t === 'scene' ? '100% 100%,100% auto' : '100% 100%,cover');
+  root.setProperty('--bgsize', b.t === 'tex' ? '100% 100%,200px' : b.t === 'scene' ? '100% 100%,cover' : '100% 100%,cover');
   root.setProperty('--bgrep', b.t === 'tex' ? 'no-repeat,repeat' : 'no-repeat');
-  if (b.t === 'scene') root.setProperty('--bgcol', SCI[b.id][4].match(/stop-color="(#\w+)"/)[1]); else root.removeProperty('--bgcol');
+  if (b.t === 'scene') root.setProperty('--bgcol', SCI[b.id][5]); else root.removeProperty('--bgcol');
 }
 function setBg(v) {
   const i = v.indexOf(':'), t = i < 0 ? v : v.slice(0, i), id = i < 0 ? '' : v.slice(i + 1);
@@ -759,12 +748,12 @@ function pageBody() {
   }
   if (p === 'theme') {
     const bg = S.bg || { t: 'color' }, ck = `<span class="tck">${ic('check', 14)}</span>`, isC = c => (bg.t || 'color') === 'color' && S.accent === c;
-    const chip = ([n, c]) => `<button class="tchip" style="background:${c}" data-act="bg-set" data-v="color:${c}" aria-label="${n}">${isC(c) ? ck : ''}${c === '#8b4dff' ? `<span class="tcrown">${CROWN(15)}</span>` : ''}</button>`;
+    const chip = ([n, c]) => `<button class="tchip" style="background:${c}" data-act="bg-set" data-v="color:${c}" aria-label="${n}">${isC(c) ? ck : ''}</button>`;
     return `<div class="card"><h3>화면 모드</h3><div class="themeopts">${[['light', '라이트', 'sun'], ['dark', '다크', 'moon'], ['system', '시스템', 'gear']].map(([v, l, i]) => `<button class="${S.theme === v ? 'sel' : ''}" data-act="theme-set" data-v="${v}">${ic(i, 26)}${l}</button>`).join('')}</div></div>
     <div class="tsec">순수한 색상</div><div class="cg">${COLORS.slice(0, 4).map(chip).join('')}</div><div class="cbox"><div class="cg">${COLORS.slice(4).map(chip).join('')}</div></div>
-    <div class="tsec">텍스처 ${CROWN()}</div><div class="tg">${TEX.map((t, i) => `<button class="ttex ${bg.t === 'tex' && +bg.id === i ? 'sel' : ''}" style="background-image:${t[0]}" data-act="bg-set" data-v="tex:${i}" aria-label="텍스처 ${i + 1}"><i><b style="background:${t[1]}"></b></i>${bg.t === 'tex' && +bg.id === i ? ck : ''}</button>`).join('')}</div>
-    <div class="tsec">풍경 ${CROWN()}</div><div class="sg">${SCN.map(x => { const on = bg.t === 'scene' && bg.id === x[0]; return `<button class="tsc ${on ? 'sel' : ''}" style="background-image:${svgU(x[4])}" data-act="bg-set" data-v="scene:${x[0]}" aria-label="${x[1]}">${on ? ck : ''}</button>`; }).join('')}</div>
-    <div class="tsec">맞춤설정 ${CROWN()}</div><div class="sg">${S.customBg ? `<button class="tsc ${bg.t === 'custom' ? 'sel' : ''}" style="background-image:url(&quot;${S.customBg}&quot;)" data-act="bg-set" data-v="custom" aria-label="내 사진">${bg.t === 'custom' ? ck : ''}</button>` : ''}<button class="tsc tadd" data-act="bg-add" aria-label="내 사진 추가">${ic('plus', 36)}</button></div>`;
+    <div class="tsec">텍스처</div><div class="tg">${TEX.map((t, i) => `<button class="ttex ${bg.t === 'tex' && +bg.id === i ? 'sel' : ''}" style="background-image:${t[0]}" data-act="bg-set" data-v="tex:${i}" aria-label="텍스처 ${i + 1}"><i><b style="background:${t[1]}"></b></i>${bg.t === 'tex' && +bg.id === i ? ck : ''}</button>`).join('')}</div>
+    <div class="tsec">풍경</div><div class="sg">${SCN.map(x => { const on = bg.t === 'scene' && bg.id === x[0]; return `<button class="tsc ${on ? 'sel' : ''}" style="background-image:${scImg(x)}" data-act="bg-set" data-v="scene:${x[0]}" aria-label="${x[1]}">${on ? ck : ''}</button>`; }).join('')}</div>
+    <div class="tsec">맞춤설정</div><div class="sg">${S.customBg ? `<button class="tsc ${bg.t === 'custom' ? 'sel' : ''}" style="background-image:url(&quot;${S.customBg}&quot;)" data-act="bg-set" data-v="custom" aria-label="내 사진">${bg.t === 'custom' ? ck : ''}</button>` : ''}<button class="tsc tadd" data-act="bg-add" aria-label="내 사진 추가">${ic('plus', 36)}</button></div>`;
   }
   if (p === 'settings') return `<div class="card" style="padding:4px 18px">
     <div class="setrow"><div>하위 작업 항상 펼치기<small>끄면 숫자 배지를 눌러 펼쳐요</small></div><button data-act="menu-subs" data-keep="1"><i class="switch ${S.openSubs ? 'on' : ''}" style="display:block"></i></button></div>
