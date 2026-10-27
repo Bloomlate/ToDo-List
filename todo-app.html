@@ -45,7 +45,7 @@ input,select,textarea{font:inherit;color:inherit}
 .subs>:first-child{margin-top:10px}
 .row{position:relative;margin-bottom:8px;border-radius:14px;overflow:hidden;background:var(--card);touch-action:pan-y}
 .row .actions{position:absolute;right:0;top:0;bottom:0;width:244px;display:flex;visibility:hidden}
-.row.sw .actions{visibility:visible}
+.row.swiped .actions{visibility:visible}
 .row .actions button{width:61px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:#fff}
 .a-star{background:#bcdcf7;color:#5b7287!important}.a-date{background:#5fb4ff}.a-focus{background:var(--primary)}.a-del{background:var(--danger)}
 [data-theme=dark] .a-star{background:#2b4a63;color:#cfe6f8!important}
@@ -480,7 +480,7 @@ function rowHtml(t, grip) {
   const left = t.subs.filter(s => !s.done).length, isOpen = S.openSubs ? ui.expanded[t.id] !== false : !!ui.expanded[t.id];
   const badge = t.subs.length ? `<button class="badge ${left ? '' : 'zero'}" data-act="sub-expand" data-id="${t.id}" aria-label="하위 작업 펼치기">${left || ic('check', 13)}</button>` : '';
   const subs = t.subs.length ? `<div class="subwrap ${isOpen ? 'open' : ''}"><div class="subs">${t.subs.map((s, i) => `<div class="sub ${s.done ? 'on' : ''}"><button class="chk ${s.done ? 'on' : ''}" data-act="sub-toggle" data-id="${t.id}" data-i="${i}">${s.done ? ic('check', 11) : ''}</button><span>${esc(s.t)}</span></div>`).join('')}</div></div>` : '';
-  return `<div class="row ${t.done ? 'done' : ''} ${ui.openRow === t.id ? 'sw' : ''}" data-id="${t.id}">
+  return `<div class="row ${t.done ? 'done' : ''} ${ui.openRow === t.id ? 'swiped' : ''}" data-id="${t.id}">
     <div class="actions">
       <button class="a-star" data-act="star" data-id="${t.id}">${ic('star', 24, t.star ? 'star-on' : '')}별</button>
       <button class="a-date" data-act="date" data-id="${t.id}">${ic('cal', 24)}날짜</button>
@@ -1156,7 +1156,7 @@ $('#importfile').addEventListener('change', e => {
     if (!st) return;
     const dx = e.clientX - st.x, dy = e.clientY - st.y;
     if (!st.active) { if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { st.active = true; st.fg.classList.add('drag'); try { st.fg.setPointerCapture(e.pointerId); } catch (x) {} } else return; }
-    st.dx = dx; st.fg.parentNode.classList.add('sw');
+    st.dx = dx; st.fg.parentNode.classList.add('swiped');
     const tx = Math.max(-MAX, Math.min(0, st.base + dx));
     st.fg.style.transform = `translateX(${tx}px)`;
   });
@@ -1168,7 +1168,7 @@ $('#importfile').addEventListener('change', e => {
     fg.classList.remove('drag'); fg.style.transform = '';
     const pos = base + dx, open = pos < -MAX / 3;
     const prev = ui.openRow;
-    const hide = n => setTimeout(() => { if (ui.openRow !== n.dataset.id) n.classList.remove('sw'); }, 220);
+    const hide = n => setTimeout(() => { if (ui.openRow !== n.dataset.id) n.classList.remove('swiped'); }, 220);
     document.querySelectorAll('.fg.open').forEach(n => { if (n !== fg) { n.classList.remove('open'); hide(n.parentNode); } });
     if (open) { fg.classList.add('open'); ui.openRow = id; }
     else { fg.classList.remove('open'); if (prev === id) ui.openRow = null; hide(fg.parentNode); }
