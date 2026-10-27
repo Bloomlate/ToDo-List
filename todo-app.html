@@ -247,6 +247,22 @@ input,select,textarea{font:inherit;color:inherit}
 .fbtns .btn.pri{flex:2}
 .habit{display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--line)}
 .habit:last-child{border:0}.habit .nm{flex:1;min-width:0}.habit .nm b{display:block;font-weight:500;word-break:break-word}.habit .nm small{color:var(--sub)}
+.hfab{position:absolute;right:24px;bottom:28px;width:62px;height:62px;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;box-shadow:0 6px 14px rgba(0,0,0,.25);z-index:5}
+.hsec{color:var(--sub);font-size:14px;margin:22px 4px 8px}
+.hitem{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);border-radius:16px;padding:16px;margin-bottom:10px}
+.hitem .em{font-size:26px;width:32px;text-align:center}.hitem .tt{flex:1;min-width:0;word-break:break-word}
+.hbadge{font-size:11px;color:#fff;background:#f0605d;border-radius:10px;padding:2px 8px}
+.hlink{display:block;margin:28px auto 90px;color:var(--sub);text-align:center}.hlink u{color:var(--primary)}
+.hempty{display:grid;place-items:center;height:70%;text-align:center;color:var(--sub);line-height:1.7}
+.hcat{background:none;border:0;color:var(--text);font-size:16px;padding:4px 0}
+.hbig{font-size:84px;text-align:center;margin:18px 0}
+.hlab{font-weight:700;margin:22px 0 10px}
+.hdays{display:flex;justify-content:space-between}
+.hday{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--sub);color:var(--text)}
+.hday.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.htimes{display:flex;flex-wrap:wrap;gap:8px}
+.htimes input,.htimes button{background:var(--card);border:0;border-radius:6px;padding:10px 12px;color:var(--text);font-size:16px}
+.hadd{margin:auto 0 0;padding-top:20px}.hadd .btn{height:52px;width:100%}
 .hdots{display:flex;gap:6px}
 .hd{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--sub)}
 .hd .chk{width:24px;height:24px}
@@ -574,7 +590,15 @@ function renderMain() {
 }
 
 /* ---------- 서브 페이지 ---------- */
-const PT = { completed: '완료된 모든 작업', starred: '별표 작업', focus: '집중', focuslog: 'Focus 기록', habits: '습관', cats: '카테고리', theme: '테마', settings: '설정' };
+const HCATS = [
+  ['건강', [['🥤','물을 마시고 건강을 유지하십시오',1,0,'물 마시는 걸 잊지 않도록 도와줘요.'],['🦷','양치질하기',1,0,'하루 3번 깨끗하게 양치해요.'],['🚿','샤워하기',0,0,'매일 상쾌하게 샤워해요.'],['🌙','일찍 자세요',1,0,'일정한 시간에 잠자리에 들어요.'],['🌅','일찍 일어나기',0,0,'아침 시간을 여유롭게 시작해요.'],['💊','복약 알림',0,0,'약 먹는 시간을 놓치지 않게 알려줘요.'],['☕','휴식을 취하세요',0,0,'잠깐 쉬며 몸과 마음을 돌봐요.'],['🍐','과일을 드세요',0,0,'하루 한 번 과일을 챙겨 먹어요.']]],
+  ['삶', [['🎓','공부',1,0,'꾸준한 공부 시간을 만들어요.'],['🍳','요리',0,1,'직접 요리해 먹는 습관을 들여요.'],['🧹','집 청소',1,0,'집을 깔끔하게 유지해요.'],['🧖','스킨케어',1,0,'피부 관리를 거르지 않아요.'],['📒','지출 기록하기',0,0,'오늘 쓴 돈을 기록해요.'],['🛒','쇼핑하러 가요 / 쇼핑하러 갑시다',0,0,'장보기를 잊지 않게 알려줘요.'],['🛏️','침대 정리하기',0,0,'아침에 침대부터 정리해요.'],['🐾','펫에게 먹이 주기',0,0,'반려동물 식사 시간을 챙겨요.'],['📗','계속 읽으세요',1,0,'매일 조금씩 책을 읽어요.'],['🔤','외국어를 배우세요',0,0,'매일 조금씩 외국어를 공부해요.'],['🎸','악기 배우기',0,0,'악기 연습 시간을 만들어요.'],['✉️','가족과 계속 연락하세요',0,0,'소중한 가족에게 안부를 전해요.']]],
+  ['스포츠', [['🤸','운동하러 가다',1,0,'꾸준히 몸을 움직여요.'],['🚶','산책',0,1,'가볍게 걸으며 기분을 전환해요.'],['🧘‍♂️','스트레칭',0,0,'굳은 몸을 풀어줘요.'],['🏊','수영',0,0,'수영으로 전신 운동을 해요.'],['🧘','요가를 연습하세요',0,0,'호흡과 함께 요가를 해요.'],['🚴','자전거 타기',0,0,'자전거로 건강을 챙겨요.']]],
+  ['마음', [['🙏','기도',1,0,'차분히 기도하는 시간을 가져요.'],['🪷','명상',0,0,'잠시 멈추고 마음을 가라앉혀요.'],['🪶','일기 쓰기',1,0,'오늘 하루를 글로 남겨요.'],['🎬','오늘 돌아보기',0,0,'하루를 되돌아보는 시간을 가져요.'],['❤️','당신이 가진 것에 감사하세요',1,0,'감사한 일을 떠올려요.'],['😊','웃는 연습을 하며 행복을 느껴보세요',0,0,'웃으면 행복해져요.']]],
+  ['끊다', [['🍟','정크푸드 줄이기',0,1,'패스트푸드를 줄여 봐요.'],['🍬','설탕 줄이기',0,0,'단 음식을 줄여 봐요.'],['📱','핸드폰 사용 시간을 줄이세요',1,0,'핸드폰 보는 시간을 줄여요.'],['🎮','게임 줄이기',0,0,'게임 시간을 조절해요.']]]
+];
+const fmtT = t => { const [h, m] = t.split(':').map(Number); return `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${h < 12 ? '오전' : '오후'}`; };
+const PT = { completed: '완료된 모든 작업', starred: '별표 작업', focus: '집중', focuslog: 'Focus 기록', habits: '습관', habitlist: '습관 목록', cats: '카테고리', theme: '테마', settings: '설정' };
 function pageBody() {
   const p = ui.page;
   if (p === 'completed') {
@@ -591,13 +615,22 @@ function pageBody() {
   if (p === 'starred') { const l = S.tasks.filter(t => t.star).sort((a, b) => (a.done - b.done) || sortFn(a, b)); return l.length ? l.map(t => rowHtml(t)).join('') : `<div class="empty">${emptyArt}<div>별표 작업이 없습니다.<br>작업을 왼쪽으로 밀어 별을 눌러 보세요.</div></div>`; }
   if (p === 'cats') return `<div class="addrow"><input class="field" id="newcat" placeholder="새 카테고리 이름" maxlength="20"><button class="btn pri" style="flex:none;padding:0 20px" data-act="cat-new">추가</button></div>
     <div class="card" style="padding:6px 18px">${S.cats.length ? S.cats.map(c => `<div class="catrow"><span class="nm">${esc(c)} <small style="color:var(--sub)">(${S.tasks.filter(t => t.cat === c).length})</small></span><button class="iconbtn" data-act="cat-rename" data-v="${esc(c)}" aria-label="이름 변경">${ic('edit', 20)}</button><button class="iconbtn" data-act="cat-del" data-v="${esc(c)}">${ic('trash', 20)}</button></div>`).join('') : '<div class="kv" style="padding:14px 0">카테고리가 없습니다.</div>'}</div>`;
+  if (p === 'habitlist') return HCATS.map(([c, l], ci) => `<div class="hsec">${c}</div>${l.map((x, ii) => `<button class="hitem" data-act="habit-pick" data-v="${ci}.${ii}"><span class="em">${x[0]}</span><span class="tt">${x[1]}</span>${x[2] ? '<span>🔥</span>' : ''}${x[3] ? '<span class="hbadge">NEW</span>' : ''}<span style="color:var(--sub)">›</span></button>`).join('')}`).join('') + `<button class="hlink" data-act="habit-req"><u>여기를 눌러</u> 원하는 습관을 알려주세요.</button>`;
+  if (p === 'habitnew') {
+    const d = ui.hd, x = HCATS[d.ci][1][d.ii];
+    return `<select class="hcat" data-hd="cat"><option value="">카테고리 없음</option>${HCATS.map(([c]) => `<option ${d.cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    <div class="hbig">${x[0]}</div><div class="kv">${x[4]}</div>
+    <div class="hlab">알림 문구</div><input class="field" style="width:100%" id="hmsg" maxlength="40" value="${esc(d.msg)}">
+    <div class="hlab">반복 날짜</div><div class="hdays">${DOW.map((n, k) => `<button class="hday ${d.days.includes(k) ? 'on' : ''}" data-act="hd-day" data-v="${k}">${n}</button>`).join('')}</div>
+    <div class="hlab">알림 시간</div><div class="htimes">${d.times.map((t, k) => `<input type="time" value="${t}" data-hd="time" data-k="${k}">`).join('')}<button data-act="hd-time" aria-label="시간 추가">＋</button></div>
+    <div class="hadd"><button class="btn pri" data-act="habit-save">내 목록에 추가</button></div>`;
+  }
   if (p === 'habits') {
     const dd = [...Array(7)].map((_, i) => addDays(today(), i - 6));
-    return `<div class="addrow"><input class="field" id="newhabit" placeholder="새 습관 (예: 물 마시기)" maxlength="30"><button class="btn pri" style="flex:none;padding:0 20px" data-act="habit-add">추가</button></div>
-    <div class="card" style="padding:4px 18px">${S.habits.length ? S.habits.map(h => {
+    return `${S.habits.length ? `<div class="card" style="padding:4px 18px">${S.habits.map(h => {
       let st = 0, k = today(); if (!h.log[k]) k = addDays(k, -1); while (h.log[k]) { st++; k = addDays(k, -1); }
-      return `<div class="habit"><div class="nm"><b>${esc(h.name)}</b><small>연속 ${st}일</small></div><div class="hdots">${dd.map(d => `<div class="hd"><button class="chk ${h.log[d] ? 'on' : ''}" data-act="habit-toggle" data-id="${h.id}" data-v="${d}">${h.log[d] ? ic('check', 13) : ''}</button>${DOW[parse(d).getDay()]}</div>`).join('')}</div><button class="iconbtn" data-act="habit-del" data-id="${h.id}" style="width:32px">${ic('close', 18)}</button></div>`;
-    }).join('') : `<div class="kv" style="padding:16px 0">매일 반복하고 싶은 습관을 추가해 보세요.</div>`}</div>`;
+      return `<div class="habit"><div class="nm"><b>${h.icon ? h.icon + ' ' : ''}${esc(h.name)}</b><small>연속 ${st}일${h.times && h.times.length ? ' · ' + h.times.map(fmtT).join(', ') : ''}</small></div><div class="hdots">${dd.map(d => `<div class="hd"><button class="chk ${h.log[d] ? 'on' : ''}" data-act="habit-toggle" data-id="${h.id}" data-v="${d}">${h.log[d] ? ic('check', 13) : ''}</button>${DOW[parse(d).getDay()]}</div>`).join('')}</div><button class="iconbtn" data-act="habit-del" data-id="${h.id}" style="width:32px">${ic('close', 18)}</button></div>`;
+    }).join('')}</div>` : `<div class="hempty"><div>작은 습관 하나로 시작하세요.<br>습관을 추가하려면 “+”를 누르세요.</div></div>`}<button class="hfab" data-act="habit-new" aria-label="습관 추가">${ic('plus', 30)}</button>`;
   }
   if (p === 'theme') return `<div class="card"><h3>화면 모드</h3><div class="themeopts">${[['light', '라이트', 'sun'], ['dark', '다크', 'moon'], ['system', '시스템', 'gear']].map(([v, l, i]) => `<button class="${S.theme === v ? 'sel' : ''}" data-act="theme-set" data-v="${v}">${ic(i, 26)}${l}</button>`).join('')}</div></div>
     <div class="card"><h3>포인트 색상</h3><div class="swatches">${ACCENTS.map(([n, c]) => `<button class="sw ${S.accent === c ? 'sel' : ''}" style="background:${c}" data-act="accent-set" data-v="${c}" aria-label="${n}">${S.accent === c ? ic('check', 20) : ''}</button>`).join('')}</div></div>`;
@@ -635,7 +668,7 @@ function renderPage() {
   if (!ui.page) { el.classList.remove('open'); return; }
   const keep = el.querySelector('.pbody'), st = keep ? keep.scrollTop : 0;
   const right = ui.page === 'focus' ? `<button class="iconbtn" data-act="focus-log" aria-label="집중 기록">${ic('doc', 24)}</button><button class="iconbtn" data-act="snd-open" aria-label="집중 사운드">${ic('music', 24)}</button>` : '';
-  el.innerHTML = `<div class="phead"><button class="iconbtn" data-act="page-back">${ic('back')}</button><h2>${PT[ui.page]}</h2>${right}</div><div class="pbody ${ui.page === 'focus' ? 'fpage' : ''}">${pageBody()}</div>`;
+  el.innerHTML = `<div class="phead"><button class="iconbtn" data-act="page-back">${ic('back')}</button><h2>${ui.page === 'habitnew' ? HCATS[ui.hd.ci][1][ui.hd.ii][1] : PT[ui.page]}</h2>${right}</div><div class="pbody ${ui.page === 'focus' ? 'fpage' : ''}">${pageBody()}</div>`;
   el.querySelector('.pbody').scrollTop = st;
   el.classList.add('open');
   if (ui.page === 'focus') updateTimer();
@@ -877,7 +910,7 @@ document.addEventListener('click', e => {
     case 'drawer-cats': ui.drawerCats = !ui.drawerCats; renderDrawer(); break;
     case 'cat-go': ui.cat = v; ui.tab = 'tasks'; ui.page = null; ui.drawer = false; render(); break;
     case 'nav-page': ui.page = v; ui.drawer = false; ui.menu = false; render(); break;
-    case 'page-back': ui.page = ui.page === 'focuslog' ? 'focus' : null; render(); break;
+    case 'page-back': ui.page = ui.page === 'focuslog' ? 'focus' : ui.page === 'habitlist' ? 'habits' : ui.page === 'habitnew' ? 'habitlist' : null; render(); break;
     case 'cat': ui.cat = v; render(); break;
     case 'cat-add': askText('새 카테고리', '', n => { if (!S.cats.includes(n)) { S.cats.push(n); ui.cat = n; save(); render(); } else toast('이미 있는 카테고리예요'); }); break;
     case 'menu-toggle': ui.menu = !ui.menu; renderTop(); break;
@@ -936,6 +969,12 @@ document.addEventListener('click', e => {
     case 'cat-rename': renameCat(v); break;
     case 'cat-del': modal('카테고리 삭제', `'${esc(v)}' 카테고리를 삭제할까요? 속한 작업은 카테고리 없음으로 바뀌어요.`, () => { S.cats = S.cats.filter(c => c !== v); S.tasks.forEach(t => { if (t.cat === v) t.cat = ''; }); if (ui.cat === v) ui.cat = '모두'; save(); render(); }, '삭제'); break;
     /* 습관 */
+    case 'habit-new': ui.page = 'habitlist'; renderPage(); break;
+    case 'habit-pick': { const [ci, ii] = v.split('.').map(Number), x = HCATS[ci][1][ii]; ui.hd = { ci, ii, cat: HCATS[ci][0], msg: x[1], days: [1, 2, 3, 4, 5], times: ['08:00'] }; ui.page = 'habitnew'; renderPage(); break; }
+    case 'habit-req': toast('의견 감사해요! 곧 추가할게요'); break;
+    case 'hd-day': { const k = +v, a = ui.hd.days, n = a.indexOf(k); if (n < 0) a.push(k); else a.splice(n, 1); ui.hd.msg = $('#hmsg').value; renderPage(); break; }
+    case 'hd-time': ui.hd.msg = $('#hmsg').value; ui.hd.times.push('12:00'); renderPage(); break;
+    case 'habit-save': { const d = ui.hd, x = HCATS[d.ci][1][d.ii], m = $('#hmsg').value.trim() || x[1]; S.habits.push({ id: uid(), name: m, icon: x[0], cat: d.cat, days: d.days.slice().sort(), times: [...new Set(d.times.filter(Boolean))].sort(), log: {} }); save(); ui.page = 'habits'; renderPage(); toast('내 목록에 추가했어요'); break; }
     case 'habit-add': { const i = $('#newhabit'), n = i.value.trim(); if (n) { S.habits.push({ id: uid(), name: n, log: {} }); save(); renderPage(); } break; }
     case 'habit-toggle': { const h = S.habits.find(x => x.id === id); if (h.log[v]) delete h.log[v]; else h.log[v] = 1; save(); renderPage(); break; }
     case 'habit-del': modal('습관 삭제', '이 습관과 기록을 삭제할까요?', () => { S.habits = S.habits.filter(h => h.id !== id); save(); renderPage(); }, '삭제'); break;
@@ -983,6 +1022,7 @@ document.addEventListener('change', e => {
   else if (c === 'doneRange') { ui.doneRange = +t.value; renderMain(); }
   else if (c === 'ftask') F.taskId = t.value;
 });
+document.addEventListener('change', e => { const t = e.target, h = t.dataset && t.dataset.hd; if (!h || !ui.hd) return; if (h === 'cat') ui.hd.cat = t.value; else if (h === 'time') ui.hd.times[+t.dataset.k] = t.value; });
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     if (e.target.dataset.si !== undefined) { e.preventDefault(); $('[data-act=d-subadd]').click(); }
@@ -992,7 +1032,7 @@ document.addEventListener('keydown', e => {
     else if (e.target.id === 'newcat') $('[data-act=cat-new]').click();
     else if (e.target.id === 'newhabit') $('[data-act=habit-add]').click();
   } else if (e.key === 'Escape') {
-    if ($('#modal').classList.contains('open')) closeModal(); else if (ui.prioFor) { ui.prioFor = null; renderPrio(); } else if (ui.timeOpen) { ui.timeOpen = false; renderSound(); } else if (ui.sndOpen) { closeSound(); } else if (ui.draft) { closeTask(); } else if (ui.drawer) { ui.drawer = false; renderDrawer(); } else if (ui.page) { ui.page = null; render(); }
+    if ($('#modal').classList.contains('open')) closeModal(); else if (ui.prioFor) { ui.prioFor = null; renderPrio(); } else if (ui.timeOpen) { ui.timeOpen = false; renderSound(); } else if (ui.sndOpen) { closeSound(); } else if (ui.draft) { closeTask(); } else if (ui.drawer) { ui.drawer = false; renderDrawer(); } else if (ui.page) { ui.page = ui.page === 'habitlist' ? 'habits' : ui.page === 'habitnew' ? 'habitlist' : null; render(); }
   }
 });
 $('#attachfile').addEventListener('change', e => {
