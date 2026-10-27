@@ -179,6 +179,21 @@ input,select,textarea{font:inherit;color:inherit}
 #modal .box{background:var(--card);border-radius:20px;padding:22px 20px 18px;width:100%;max-width:340px}
 #modal h4{margin:0 0 14px;font-size:18px}
 #modal .btns{margin-top:18px}
+.dpbox{background:var(--card);border-radius:24px;padding:18px 16px 12px;width:100%;max-width:360px;max-height:100%;overflow-y:auto}
+.dpmon{display:flex;align-items:center;justify-content:center;gap:28px;font-size:18px;margin-bottom:10px}
+.dpmon button{padding:8px 10px;color:var(--text)}
+.dpgrid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;row-gap:2px}
+.dpgrid b{font-weight:500;font-size:14px;padding:6px 0}
+.dpgrid button{height:40px;width:40px;margin:0 auto;border-radius:50%;font-size:16px}
+.dpgrid button.o{color:var(--sub);opacity:.55}
+.dpgrid button.td{color:var(--primary);font-weight:700}
+.dpgrid button.sel{background:var(--primary);color:#fff;opacity:1;font-weight:600}
+.dpchips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.dpchips button{padding:8px 12px;border-radius:8px;background:var(--chipsel);color:var(--primary);font-size:14px}
+.dpchips button.sel{background:var(--primary);color:#fff}
+.dprow{display:flex;align-items:center;gap:12px;width:100%;padding:13px 4px;border-bottom:1px solid var(--line);text-align:left}
+.dprow span{flex:1;font-size:16px}.dprow small{color:var(--sub);font-size:14px}.dprow.off{opacity:.4;pointer-events:none}
+.dpfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}.dpfoot button{padding:10px 14px;color:var(--primary);font-weight:600}
 #toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);background:#222c36;color:#fff;padding:12px 20px;border-radius:24px;z-index:90;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;max-width:85%;text-align:center}
 #toast.show{opacity:1}
 .setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
@@ -801,6 +816,36 @@ const tpPick = e => {
 document.addEventListener('pointerdown', e => { if (e.target.id === 'tpclock') { ui.tpDrag = true; tpPick(e); } });
 document.addEventListener('pointermove', e => { if (ui.tpDrag) tpPick(e); });
 document.addEventListener('pointerup', () => { if (ui.tpDrag) { ui.tpDrag = false; if (ui.tp && ui.tp.step === 'h') { ui.tp.step = 'm'; renderTp(); } } });
+/* ---------- 날짜 선택 팝업 (날짜/시간/알림/반복) ---------- */
+function openDp(tgt, id) {
+  const r = tgt === 'row' ? byId(id) : ui.draft, dt = parse(r.date || today());
+  ui.dp = { tgt, id, y: dt.getFullYear(), m: dt.getMonth(), date: r.date || '', time: r.time || '', remind: r.remind === undefined ? '' : r.remind, repeat: r.repeat || 'none', sub: null };
+  renderDp();
+}
+function renderDp() {
+  const d = ui.dp, m = $('#modal'), td = today(), sun = (() => { const n = parse(td).getDay(); return addDays(td, n === 0 ? 7 : 7 - n); })();
+  if (d.sub) {
+    const items = d.sub === 'rem' ? Object.entries(REM) : Object.entries(RPT).map(([v, l]) => [v, v === 'none' ? '반복 안 함' : l]);
+    const cur = d.sub === 'rem' ? d.remind : d.repeat;
+    m.innerHTML = `<div class="dpbox"><h4 style="margin:0 0 8px;font-size:18px">${d.sub === 'rem' ? '알림' : '반복'}</h4>${(d.sub === 'rem' ? [['', '알림 없음'], ...items] : items).map(([v, l]) => `<label style="display:flex;gap:12px;padding:11px 0;align-items:center"><input type="radio" name="dpo" value="${v}" data-act="dp-opt" data-v="${v}" ${String(cur) === String(v) ? 'checked' : ''}><span>${l}</span></label>`).join('')}<div class="dpfoot"><button data-act="dp-back">닫기</button></div></div>`;
+    m.classList.add('open'); modalCb = null; return;
+  }
+  const first = new Date(d.y, d.m, 1), start = new Date(d.y, d.m, 1 - first.getDay());
+  let cells = '';
+  for (let i = 0; i < 42; i++) { const c = new Date(start); c.setDate(start.getDate() + i); const s2 = ymd(c); cells += `<button class="${c.getMonth() !== d.m ? 'o' : ''} ${s2 === td ? 'td' : ''} ${s2 === d.date ? 'sel' : ''}" data-act="dp-day" data-v="${s2}">${c.getDate()}</button>`; }
+  const chip = (l, v) => `<button class="${d.date === v ? 'sel' : ''}" data-act="dp-day" data-v="${v}">${l}</button>`;
+  const tm = d.time ? (+d.time.slice(0, 2) >= 12 ? '오후 ' : '오전 ') + ((+d.time.slice(0, 2)) % 12 || 12) + ':' + d.time.slice(3) : '아니요';
+  const rm = d.time && d.remind !== '' && d.remind != null ? REM[d.remind] : '아니요';
+  m.innerHTML = `<div class="dpbox"><div class="dpmon"><button data-act="dp-mon" data-v="-1" aria-label="이전 달">◀</button><span>${d.y}년 ${d.m + 1}월</span><button data-act="dp-mon" data-v="1" aria-label="다음 달">▶</button></div>
+  <div class="dpgrid">${'일월화수목금토'.split('').map(w => `<b>${w}</b>`).join('')}${cells}</div>
+  <div class="dpchips">${chip('오늘', td)}${chip('내일', addDays(td, 1))}${chip('3일 후', addDays(td, 3))}${chip('이번 주 일요일', sun)}${chip('날짜 없음', '')}</div>
+  <button class="dprow" data-act="dp-time">${ic('clock', 24)}<span>시간</span><small>${tm}</small></button>
+  <button class="dprow ${d.time ? '' : 'off'}" data-act="dp-sub" data-v="rem">${ic('bell', 24)}<span>알림</span><small>${rm}</small></button>
+  <button class="dprow" data-act="dp-sub" data-v="rpt">${ic('repeat', 24)}<span>반복</span><small>${RPT[d.repeat]}</small></button>
+  <div class="dpfoot"><button data-act="dp-cancel">취소</button><button data-act="dp-ok">완료</button></div></div>`;
+  m.classList.add('open'); modalCb = null;
+}
+const closeDp = () => { ui.dp = null; closeModal(); };
 let toastT;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400); }
 
@@ -961,7 +1006,7 @@ document.addEventListener('click', e => {
     case 'fab': openSheet(); break;
     case 'done': toggleDone(id); break;
     case 'star': { const t = byId(id); t.star = !t.star; ui.openRow = null; save(); render(); break; }
-    case 'date': { const t = byId(id); ui.openRow = null; renderMain(); modal('날짜 변경', `<input type="date" class="field" id="m-date" style="width:100%" value="${t.date || today()}">`, () => { t.date = $('#m-date').value || null; t.notified = false; save(); render(); }); break; }
+    case 'date': ui.openRow = null; renderMain(); openDp('row', id); break;
     case 'focus-task': F.taskId = id; ui.openRow = null; ui.page = 'focus'; render(); break;
     case 'del': delTask(id); toast('삭제했어요'); break;
     case 'sub-expand': { const w = b.closest('.row').querySelector('.subwrap'); if (w) { const o = !w.classList.contains('open'); w.classList.toggle('open', o); ui.expanded[id] = o; } break; }
@@ -981,7 +1026,20 @@ document.addEventListener('click', e => {
     case 't-star': ui.draft.star = !ui.draft.star; ui.tmenu = false; renderSheet(); break;
     case 't-focus': ui.tmenu = false; if (!commitDraft()) { toast('제목을 입력하세요'); renderSheet(); break; } F.taskId = ui.draft.id; ui.draft = null; ui.page = 'focus'; render(); break;
     case 'd-del': { const did = ui.draft.id; ui.draft = null; ui.tmenu = false; if (did) { delTask(did); toast('삭제했어요'); } else render(); break; }
-    case 't-cat': case 't-date': case 't-time': case 't-repeat': case 't-memo': taskDialog(act.slice(2)); break;
+    case 't-date': openDp('draft'); break;
+    case 't-cat': case 't-time': case 't-repeat': case 't-memo': taskDialog(act.slice(2)); break;
+    case 'dp-mon': { const d = ui.dp, n = new Date(d.y, d.m + +v, 1); d.y = n.getFullYear(); d.m = n.getMonth(); renderDp(); break; }
+    case 'dp-day': { const d = ui.dp; d.date = v; if (v) { const n = parse(v); d.y = n.getFullYear(); d.m = n.getMonth(); } renderDp(); break; }
+    case 'dp-time': { const d = ui.dp, t = d.time || '09:00', H = +t.slice(0, 2); ui.tp = { k: -1, dp: true, h: H % 12 || 12, m: +t.slice(3), pm: H >= 12, step: 'h', kb: false }; renderTp(); break; }
+    case 'dp-sub': ui.dp.sub = v; renderDp(); break;
+    case 'dp-opt': { const d = ui.dp; if (d.sub === 'rem') d.remind = v === '' ? '' : +v; else d.repeat = v; d.sub = null; renderDp(); break; }
+    case 'dp-back': ui.dp.sub = null; renderDp(); break;
+    case 'dp-cancel': closeDp(); break;
+    case 'dp-ok': {
+      const d = ui.dp, r = d.tgt === 'row' ? byId(d.id) : ui.draft;
+      r.date = d.date || null; r.time = d.time; r.remind = d.time ? d.remind : ''; r.repeat = d.repeat;
+      if (d.tgt === 'row') { r.notified = false; save(); closeDp(); render(); } else { closeDp(); renderSheet(); }
+      break; }
     case 'm-q': $('#m-date').value = v === 'x' ? '' : addDays(today(), +v); break;
     case 'prio-pick': ui.prioFor = id; renderPrio(); break;
     case 'prio-close': ui.prioFor = null; renderPrio(); break;
@@ -1016,11 +1074,12 @@ document.addEventListener('click', e => {
     case 'tp-ampm': ui.tp.pm = v === 'pm'; renderTp(); break;
     case 'tp-step': ui.tp.step = v; ui.tp.kb = false; renderTp(); break;
     case 'tp-kb': ui.tp.kb = !ui.tp.kb; renderTp(); break;
-    case 'tp-cancel': closeTp(); break;
-    case 'tp-del': if (ui.tp.k >= 0) ui.hd.times.splice(ui.tp.k, 1); closeTp(); renderPage(); break;
+    case 'tp-cancel': if (ui.tp.dp) { ui.tp = null; renderDp(); } else closeTp(); break;
+    case 'tp-del': if (ui.tp.dp) { ui.dp.time = ''; ui.tp = null; renderDp(); break; } if (ui.tp.k >= 0) ui.hd.times.splice(ui.tp.k, 1); closeTp(); renderPage(); break;
     case 'tp-save': {
       const t = ui.tp; if (t.kb) { const h = Math.round(+$('#tp-h').value), m = Math.round(+$('#tp-m').value); if (!(h >= 1 && h <= 12 && m >= 0 && m <= 59)) { toast('시 1~12, 분 0~59로 입력하세요'); break; } t.h = h; t.m = m; }
       const str = String((t.h % 12) + (t.pm ? 12 : 0)).padStart(2, '0') + ':' + String(t.m).padStart(2, '0');
+      if (t.dp) { ui.dp.time = str; ui.tp = null; renderDp(); break; }
       if (t.k >= 0) ui.hd.times[t.k] = str; else ui.hd.times.push(str);
       ui.hd.times = [...new Set(ui.hd.times)].sort(); closeTp(); renderPage(); break; }
     case 'habit-save': { const d = ui.hd, x = HCATS[d.ci][1][d.ii], m = $('#hmsg').value.trim() || x[1]; S.habits.push({ id: uid(), name: m, icon: x[0], cat: d.cat, days: d.days.slice().sort(), times: [...new Set(d.times.filter(Boolean))].sort(), log: {} }); save(); ui.page = 'habits'; renderPage(); toast('내 목록에 추가했어요'); break; }
