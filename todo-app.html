@@ -262,6 +262,20 @@ input,select,textarea{font:inherit;color:inherit}
 .hday.on{background:var(--primary);border-color:var(--primary);color:#fff}
 .htimes{display:flex;flex-wrap:wrap;gap:8px}
 .htimes input,.htimes button{background:var(--card);border:0;border-radius:6px;padding:10px 12px;color:var(--text);font-size:16px}
+.tpbox{background:var(--card);border-radius:24px;padding:22px 20px 14px;width:100%;max-width:340px}
+.tpbox h4{margin:0 0 14px;font-size:18px}
+.tphead{display:flex;align-items:center;justify-content:space-between}
+.tptime{display:flex;align-items:center;font-size:56px;font-variant-numeric:tabular-nums}
+.tptime button,.tptime input{font-size:56px;color:var(--sub);width:auto;padding:0 4px;background:none;border:0}
+.tptime button.on{color:var(--text)}.tptime input{width:78px;background:var(--bg);border-radius:10px;text-align:center;color:var(--text)}
+.tpap{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tpap button{padding:10px 12px;color:var(--sub)}.tpap button.on{background:var(--primary);color:#fff}
+.tpclock{position:relative;width:240px;height:240px;margin:14px auto 6px;touch-action:none;user-select:none}
+.tpclock .n{position:absolute;width:40px;height:40px;margin:-20px;display:grid;place-items:center;border-radius:50%;pointer-events:none;font-size:16px}
+.tpclock .n.on{background:var(--primary);color:#fff}
+.tpclock .hand{position:absolute;left:50%;top:50%;height:2px;background:var(--primary);transform-origin:0 50%;pointer-events:none}
+.tpclock .dot{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;background:var(--primary);pointer-events:none}
+.tpfoot{display:flex;align-items:center;gap:6px}.tpfoot .sp{flex:1}.tpfoot button{padding:10px 12px;color:var(--primary);font-weight:600}
 .hadd{margin:auto 0 0;padding-top:20px}.hadd .btn{height:52px;width:100%}
 .hdots{display:flex;gap:6px}
 .hd{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--sub)}
@@ -622,7 +636,7 @@ function pageBody() {
     <div class="hbig">${x[0]}</div><div class="kv">${x[4]}</div>
     <div class="hlab">알림 문구</div><input class="field" style="width:100%" id="hmsg" maxlength="40" value="${esc(d.msg)}">
     <div class="hlab">반복 날짜</div><div class="hdays">${DOW.map((n, k) => `<button class="hday ${d.days.includes(k) ? 'on' : ''}" data-act="hd-day" data-v="${k}">${n}</button>`).join('')}</div>
-    <div class="hlab">알림 시간</div><div class="htimes">${d.times.map((t, k) => `<input type="time" value="${t}" data-hd="time" data-k="${k}">`).join('')}<button data-act="hd-time" aria-label="시간 추가">＋</button></div>
+    <div class="hlab">알림 시간</div><div class="htimes">${d.times.map((t, k) => `<button data-act="tp-open" data-v="${k}">${fmtT(t)}</button>`).join('')}<button data-act="tp-open" data-v="-1" aria-label="시간 추가">＋</button></div>
     <div class="hadd"><button class="btn pri" data-act="habit-save">내 목록에 추가</button></div>`;
   }
   if (p === 'habits') {
@@ -762,6 +776,31 @@ function modal(title, body, ok, okText = '확인') {
 }
 const closeModal = () => { $('#modal').classList.remove('open'); modalCb = null; };
 const askText = (title, val, cb) => modal(title, `<input class="field" id="m-in" style="width:100%" maxlength="30" value="${esc(val)}">`, () => { const v = $('#m-in').value.trim(); if (!v) return false; return cb(v); });
+/* ---------- 시간 설정 팝업 ---------- */
+function closeTp() { ui.tp = null; closeModal(); }
+function renderTp() {
+  const t = ui.tp, m = $('#modal'), p2 = n => String(n).padStart(2, '0'), hm = t.step === 'h';
+  const num = (label, ang, on) => { const a = ang * Math.PI / 180; return `<div class="n ${on ? 'on' : ''}" style="left:${120 + 92 * Math.sin(a)}px;top:${120 - 92 * Math.cos(a)}px">${label}</div>`; };
+  const ang = hm ? t.h * 30 : t.m * 6;
+  let nums = '';
+  if (hm) for (let i = 1; i <= 12; i++) nums += num(i, i * 30, i === t.h);
+  else for (let i = 0; i < 60; i += 5) nums += num(i, i * 6, i === t.m);
+  if (!hm && t.m % 5) nums += `<div class="n on" style="left:${120 + 92 * Math.sin(ang * Math.PI / 180)}px;top:${120 - 92 * Math.cos(ang * Math.PI / 180)}px;width:8px;height:8px;margin:-4px;padding:0"></div>`;
+  const time = t.kb ? `<input id="tp-h" type="number" inputmode="numeric" min="1" max="12" value="${t.h}"><span>:</span><input id="tp-m" type="number" inputmode="numeric" min="0" max="59" value="${p2(t.m)}">` : `<button class="${hm ? 'on' : ''}" data-act="tp-step" data-v="h">${p2(t.h)}</button><span>:</span><button class="${hm ? '' : 'on'}" data-act="tp-step" data-v="m">${p2(t.m)}</button>`;
+  m.innerHTML = `<div class="tpbox"><h4>시간 설정</h4><div class="tphead"><div class="tptime" style="font-size:${t.kb ? 40 : 56}px">${time}</div><div class="tpap"><button class="${t.pm ? '' : 'on'}" data-act="tp-ampm" data-v="am">오전</button><button class="${t.pm ? 'on' : ''}" data-act="tp-ampm" data-v="pm">오후</button></div></div>
+  ${t.kb ? '<div style="height:60px"></div>' : `<div class="tpclock" id="tpclock">${nums}<div class="hand" style="width:92px;transform:rotate(${ang - 90}deg)"></div><div class="dot"></div></div>`}
+  <div class="tpfoot"><button data-act="tp-kb" aria-label="키보드 입력">⌨️</button><span class="sp"></span><button data-act="tp-del">삭제</button><button data-act="tp-cancel">취소</button><button data-act="tp-save">저장</button></div></div>`;
+  m.classList.add('open'); modalCb = null;
+}
+const tpPick = e => {
+  const c = $('#tpclock'); if (!c || !ui.tp) return; const r = c.getBoundingClientRect();
+  let a = Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * 180 / Math.PI; if (a < 0) a += 360;
+  if (ui.tp.step === 'h') ui.tp.h = Math.round(a / 30) || 12; else ui.tp.m = Math.round(a / 6) % 60;
+  renderTp();
+};
+document.addEventListener('pointerdown', e => { if (e.target.id === 'tpclock') { ui.tpDrag = true; tpPick(e); } });
+document.addEventListener('pointermove', e => { if (ui.tpDrag) tpPick(e); });
+document.addEventListener('pointerup', () => { if (ui.tpDrag) { ui.tpDrag = false; if (ui.tp && ui.tp.step === 'h') { ui.tp.step = 'm'; renderTp(); } } });
 let toastT;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400); }
 
@@ -973,7 +1012,17 @@ document.addEventListener('click', e => {
     case 'habit-pick': { const [ci, ii] = v.split('.').map(Number), x = HCATS[ci][1][ii]; ui.hd = { ci, ii, cat: HCATS[ci][0], msg: x[1], days: [1, 2, 3, 4, 5], times: ['08:00'] }; ui.page = 'habitnew'; renderPage(); break; }
     case 'habit-req': toast('의견 감사해요! 곧 추가할게요'); break;
     case 'hd-day': { const k = +v, a = ui.hd.days, n = a.indexOf(k); if (n < 0) a.push(k); else a.splice(n, 1); ui.hd.msg = $('#hmsg').value; renderPage(); break; }
-    case 'hd-time': ui.hd.msg = $('#hmsg').value; ui.hd.times.push('12:00'); renderPage(); break;
+    case 'tp-open': { ui.hd.msg = $('#hmsg').value; const k = +v, t = k >= 0 ? ui.hd.times[k] : '09:00', H = +t.slice(0, 2); ui.tp = { k, h: H % 12 || 12, m: +t.slice(3), pm: H >= 12, step: 'h', kb: false }; renderTp(); break; }
+    case 'tp-ampm': ui.tp.pm = v === 'pm'; renderTp(); break;
+    case 'tp-step': ui.tp.step = v; ui.tp.kb = false; renderTp(); break;
+    case 'tp-kb': ui.tp.kb = !ui.tp.kb; renderTp(); break;
+    case 'tp-cancel': closeTp(); break;
+    case 'tp-del': if (ui.tp.k >= 0) ui.hd.times.splice(ui.tp.k, 1); closeTp(); renderPage(); break;
+    case 'tp-save': {
+      const t = ui.tp; if (t.kb) { const h = Math.round(+$('#tp-h').value), m = Math.round(+$('#tp-m').value); if (!(h >= 1 && h <= 12 && m >= 0 && m <= 59)) { toast('시 1~12, 분 0~59로 입력하세요'); break; } t.h = h; t.m = m; }
+      const str = String((t.h % 12) + (t.pm ? 12 : 0)).padStart(2, '0') + ':' + String(t.m).padStart(2, '0');
+      if (t.k >= 0) ui.hd.times[t.k] = str; else ui.hd.times.push(str);
+      ui.hd.times = [...new Set(ui.hd.times)].sort(); closeTp(); renderPage(); break; }
     case 'habit-save': { const d = ui.hd, x = HCATS[d.ci][1][d.ii], m = $('#hmsg').value.trim() || x[1]; S.habits.push({ id: uid(), name: m, icon: x[0], cat: d.cat, days: d.days.slice().sort(), times: [...new Set(d.times.filter(Boolean))].sort(), log: {} }); save(); ui.page = 'habits'; renderPage(); toast('내 목록에 추가했어요'); break; }
     case 'habit-add': { const i = $('#newhabit'), n = i.value.trim(); if (n) { S.habits.push({ id: uid(), name: n, log: {} }); save(); renderPage(); } break; }
     case 'habit-toggle': { const h = S.habits.find(x => x.id === id); if (h.log[v]) delete h.log[v]; else h.log[v] = 1; save(); renderPage(); break; }
