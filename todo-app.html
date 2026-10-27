@@ -44,14 +44,14 @@ input,select,textarea{font:inherit;color:inherit}
 .subwrap>.subs{overflow:hidden;min-height:0}
 .subs>:first-child{margin-top:10px}
 .row{position:relative;margin-bottom:8px;border-radius:14px;overflow:hidden;background:var(--card);touch-action:pan-y}
-.row .actions{position:absolute;right:0;top:0;bottom:0;width:244px;display:flex;visibility:hidden}
+.row .actions{position:absolute;right:0;top:0;bottom:0;width:176px;display:flex;visibility:hidden}
 .row.sw .actions{visibility:visible}
-.row .actions button{width:61px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:#fff}
+.row .actions button{width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:#fff}
 .a-star{background:#bcdcf7;color:#5b7287!important}.a-date{background:#5fb4ff}.a-focus{background:var(--primary)}.a-del{background:var(--danger)}
 [data-theme=dark] .a-star{background:#2b4a63;color:#cfe6f8!important}
-.fg{position:relative;background:var(--card);display:flex;align-items:flex-start;gap:12px;padding:14px 12px;transition:transform .2s;cursor:pointer;user-select:none;touch-action:pan-y}
+.fg{position:relative;width:calc(100% - var(--sw,0px));background:var(--card);display:flex;align-items:flex-start;gap:12px;padding:14px 12px;transition:width .2s;cursor:pointer;user-select:none;touch-action:pan-y}
 .fg.drag{transition:none}
-.fg.open{transform:translateX(-244px)}
+.fg.open{--sw:176px}
 .chk{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--sub);display:grid;place-items:center;color:#fff;margin-top:1px;opacity:.85}
 .chk.on{background:var(--primary);border-color:var(--primary);opacity:1}
 .medalbtn{display:grid;place-items:center;width:34px;height:34px;border-radius:50%}
@@ -462,7 +462,7 @@ function renderTop() {
     <button data-act="menu-subs"><span>하위 작업 항상 펼치기</span><i class="switch ${S.openSubs ? 'on' : ''}"></i></button></div>` : '';
 }
 function renderNav() {
-  const items = [['menu', '', ic('menu', 28), 'drawer-open'], ['tasks', '작업', navIc.tasks, 'tab'], ['cal', '캘린더', navIc.cal, 'tab'], ['me', '내 것', navIc.me, 'tab']];
+  const items = [['menu', '', ic('menu', 28), 'drawer-open'], ['tasks', 'ToDo', navIc.tasks, 'tab'], ['cal', '캘린더', navIc.cal, 'tab'], ['me', '내 것', navIc.me, 'tab']];
   $('#nav').innerHTML = items.map(([k, l, svg, act]) => `<button class="${act === 'tab' && ui.tab === (k === 'cal' ? 'cal' : k === 'me' ? 'me' : 'tasks') ? 'on' : ''}" data-act="${act}" data-v="${k}"><span class="${k === 'menu' && !S.seenDot ? 'dot' : ''}">${svg}</span>${l}</button>`).join('');
   $('#fab').innerHTML = ic('plus', 30);
   $('#fab').style.display = ui.tab === 'me' || ui.page ? 'none' : 'grid';
@@ -1147,7 +1147,7 @@ $('#importfile').addEventListener('change', e => {
 
 /* ---------- 왼쪽 스와이프 ---------- */
 (() => {
-  const MAX = 244; let st = null;
+  const MAX = 176; let st = null;
   document.addEventListener('pointerdown', e => {
     const fg = e.target.closest('.fg'); if (!fg || e.target.closest('.chk, .grip, .medalbtn')) return;
     st = { fg, x: e.clientX, y: e.clientY, base: fg.classList.contains('open') ? -MAX : 0, dx: 0, active: false, id: fg.dataset.id };
@@ -1158,14 +1158,14 @@ $('#importfile').addEventListener('change', e => {
     if (!st.active) { if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { st.active = true; st.fg.classList.add('drag'); try { st.fg.setPointerCapture(e.pointerId); } catch (x) {} } else return; }
     st.dx = dx; st.fg.parentNode.classList.add('sw');
     const tx = Math.max(-MAX, Math.min(0, st.base + dx));
-    st.fg.style.transform = `translateX(${tx}px)`;
+    st.fg.style.setProperty('--sw', -tx + 'px');
   });
   const end = () => {
     if (!st) return;
     const { fg, active, base, dx, id } = st; st = null;
     if (!active) return;
     moved = true; setTimeout(() => moved = false, 60);
-    fg.classList.remove('drag'); fg.style.transform = '';
+    fg.classList.remove('drag'); fg.style.removeProperty('--sw');
     const pos = base + dx, open = pos < -MAX / 3;
     const prev = ui.openRow;
     const hide = n => setTimeout(() => { if (ui.openRow !== n.dataset.id) n.classList.remove('sw'); }, 220);
