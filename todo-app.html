@@ -200,6 +200,8 @@ input,select,textarea{font:inherit;color:inherit}
 .dpck input{width:22px;height:22px;accent-color:var(--primary)}
 .dpdim{opacity:.4;pointer-events:none}
 .dpcu{display:flex;gap:8px;margin:0 4px 6px 40px}.dpcu input,.dpcu select{flex:1;min-width:0;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.dpseg{display:flex;gap:8px;margin:8px 4px}.dpseg button{flex:1;padding:12px 4px;border-radius:10px;border:2px solid var(--line);font-size:15px}.dpseg button.on{border-color:var(--primary);background:var(--chipsel);color:var(--primary);font-weight:700}
+.dpnote{margin:6px 4px;font-size:13px;color:var(--sub)}.dpperm{margin:6px 4px;padding:9px 14px;border-radius:10px;background:var(--chipsel);color:var(--primary);font-size:14px;font-weight:600}
 .dpcard{display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:12px;border:2px solid var(--line);margin:10px 0;font-size:16px}
 .dpcard.sel{border-color:var(--primary);background:var(--chipsel)}.dpcard.dis{opacity:.6}.dpcard small{display:block;color:var(--sub);font-size:13px;line-height:1.6;margin-top:6px}
 .dpradio{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--sub);display:block;margin-top:1px}.dpradio.on{border-color:var(--primary);box-shadow:inset 0 0 0 4px var(--card);background:var(--primary)}
@@ -921,7 +923,7 @@ document.addEventListener('pointerup', () => { if (ui.tpDrag) { ui.tpDrag = fals
 /* ---------- 날짜 선택 팝업 (날짜/시간/알림/반복) ---------- */
 function openDp(tgt, id) {
   const r = tgt === 'row' ? byId(id) : ui.draft, dt = parse(r.date || today());
-  ui.dp = { tgt, id, y: dt.getFullYear(), m: dt.getMonth(), date: r.date || '', time: r.time || '', reminds: remList(r).slice(), rs: null, repeat: r.repeat || 'none', sub: null };
+  ui.dp = { tgt, id, y: dt.getFullYear(), m: dt.getMonth(), date: r.date || '', time: r.time || '', reminds: remList(r).slice(), am: r.alertMode || 'both', rs: null, repeat: r.repeat || 'none', sub: null };
   renderDp();
 }
 function renderDp() {
@@ -933,9 +935,11 @@ function renderDp() {
     <div class="${rs.on ? '' : 'dpdim'}"><div class="dpsec">알림 시간</div>${PRE.map(o => cb(rs.sel.includes(o), offLabel(o), 'dpr-pre', o)).join('')}
     ${cb(rs.cu.on, '시간 사용자 지정', 'dpr-cu', 'x')}
     ${rs.cu.on ? `<div class="dpcu"><input type="number" inputmode="numeric" min="1" id="dpr-n" value="${rs.cu.n}"><select id="dpr-u"><option value="1" ${rs.cu.u === 1 ? 'selected' : ''}>분 전</option><option value="60" ${rs.cu.u === 60 ? 'selected' : ''}>시간 전</option><option value="1440" ${rs.cu.u === 1440 ? 'selected' : ''}>일 전</option></select></div>` : ''}</div>
-    <hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="dpsec">알림 유형</div>
-    <div class="dpcard sel"><i class="dpradio on"></i><span>표준 알림</span></div>
-    <div class="dpcard dis"><i class="dpradio"></i><div><span>향상된 미리 알림 👑</span><small>잠금 화면 미리 알림<br>연속 벨소리 맞춤 설정<br>미리 알림 레이아웃 맞춤 설정</small></div></div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="dpsec">알림 방식</div>
+    <div class="dpseg">${Object.entries(ALERTS).map(([k, l]) => `<button class="${d.am === k ? 'on' : ''}" data-act="dpr-am" data-v="${k}">${l}</button>`).join('')}</div>
+    ${navigator.vibrate ? '' : '<div class="dpnote">이 기기/브라우저는 진동을 지원하지 않아요</div>'}
+    <div class="dpnote">앱이 열려 있을 때만 알림이 울려요</div>
+    ${'Notification' in window ? (Notification.permission === 'granted' ? '<div class="dpnote">알림 권한: 허용됨</div>' : Notification.permission === 'denied' ? '<div class="dpnote">알림 권한이 차단됨 (브라우저 설정에서 허용해 주세요)</div>' : '<button class="dpperm" data-act="dpr-perm">알림 권한 요청</button>') : ''}
     <div class="dpfoot"><button data-act="dp-back">취소</button><button data-act="dpr-ok">완료</button></div></div>`;
     m.classList.add('open'); modalCb = null; return;
   }
@@ -1052,9 +1056,14 @@ function updateTimer() {
 }
 function recordFocus(min) { if (min >= 1) { S.focus.push({ ts: Date.now(), min, taskId: F.taskId, mode: F.mode }); save(); } }
 function beep() { if (!F.sound) return; try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value = 880; g.gain.setValueAtTime(.2, c.currentTime); g.gain.exponentialRampToValueAtTime(.001, c.currentTime + .8); o.start(); o.stop(c.currentTime + .8); } catch (e) {} }
-function notify(title, body) {
-  toast(title + (body ? ' · ' + body : '')); beep();
-  if ('Notification' in window && Notification.permission === 'granted') { try { new Notification(title, { body }); } catch (e) {} }
+const ALERTS = { sound: '소리', vibrate: '진동', both: '소리+진동' }, VIB = [400, 200, 400, 200, 400];
+function alertFx(mode) {
+  if (mode !== 'vibrate') try { const c = AC = AC || new (window.AudioContext || window.webkitAudioContext)(); c.resume(); [0, .45, .9].forEach(t0 => { const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = 880; o.connect(g); g.connect(c.destination); const t = c.currentTime + t0; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.35, t + .03); g.gain.exponentialRampToValueAtTime(.0001, t + .35); o.start(t); o.stop(t + .4); }); } catch (e) {}
+  if (mode !== 'sound' && navigator.vibrate) try { navigator.vibrate(VIB); } catch (e) {}
+}
+function notify(title, body, mode) {
+  toast(title + (body ? ' · ' + body : '')); if (mode) alertFx(mode); else beep();
+  if ('Notification' in window && Notification.permission === 'granted') { try { const o = { body }; if (mode && mode !== 'sound') o.vibrate = VIB; new Notification(title, o); } catch (e) {} }
 }
 setInterval(() => {
   if (F.running && F.mode === 'sw') updateTimer();
@@ -1077,7 +1086,7 @@ function checkReminders() {
     offs.forEach(o => {
       if (t.nfired.includes(o)) return;
       const fire = at.getTime() - o * 60000;
-      if (now >= fire && now < fire + 6 * 3600e3) { t.nfired.push(o); ch = true; notify(t.title, o ? `${offLabel(o).replace(' 전', '')} 후 시작` : '지금 시작할 시간이에요'); }
+      if (now >= fire && now < fire + 6 * 3600e3) { t.nfired.push(o); ch = true; notify(t.title, o ? `${offLabel(o).replace(' 전', '')} 후 시작` : '지금 시작할 시간이에요', t.alertMode || 'both'); }
     });
     if (offs.every(o => t.nfired.includes(o))) t.notified = true;
   });
@@ -1153,6 +1162,8 @@ document.addEventListener('click', e => {
     case 'dp-day': { const d = ui.dp; d.date = v; if (v) { const n = parse(v); d.y = n.getFullYear(); d.m = n.getMonth(); } renderDp(); break; }
     case 'dp-time': { const d = ui.dp, t = d.time || '09:00', H = +t.slice(0, 2); ui.tp = { k: -1, dp: true, h: H % 12 || 12, m: +t.slice(3), pm: H >= 12, step: 'h', kb: false }; renderTp(); break; }
     case 'dp-sub': { const d = ui.dp; d.sub = v; if (v === 'rem') { const PRE = [0, 5, 15, 30, 1440], cu = d.reminds.find(o => !PRE.includes(o)), u = cu ? (cu % 1440 === 0 ? 1440 : cu % 60 === 0 ? 60 : 1) : 1; d.rs = { on: d.reminds.length > 0, sel: d.reminds.filter(o => PRE.includes(o)), cu: { on: cu != null, n: cu ? cu / u : 10, u } }; } renderDp(); break; }
+    case 'dpr-am': ui.dp.am = v; alertFx(v); renderDp(); break;
+    case 'dpr-perm': if ('Notification' in window) Notification.requestPermission().then(() => { if (ui.dp && ui.dp.sub === 'rem') renderDp(); }); break;
     case 'dpr-on': { const rs = ui.dp.rs; rs.on = !rs.on; if (rs.on && !rs.sel.length && !rs.cu.on) rs.sel = [5]; renderDp(); break; }
     case 'dpr-pre': { const rs = ui.dp.rs, o = +v, i = rs.sel.indexOf(o); if (i < 0) rs.sel.push(o); else rs.sel.splice(i, 1); break; }
     case 'dpr-cu': { const rs = ui.dp.rs; rs.cu.on = !rs.cu.on; renderDp(); break; }
@@ -1166,7 +1177,7 @@ document.addEventListener('click', e => {
     case 'dp-cancel': closeDp(); break;
     case 'dp-ok': {
       const d = ui.dp, r = d.tgt === 'row' ? byId(d.id) : ui.draft;
-      r.date = d.date || null; r.time = d.time; r.reminds = d.time ? d.reminds.slice() : []; r.remind = r.reminds.length ? r.reminds[0] : ''; r.repeat = d.repeat;
+      r.date = d.date || null; r.time = d.time; r.alertMode = d.am; r.reminds = d.time ? d.reminds.slice() : []; r.remind = r.reminds.length ? r.reminds[0] : ''; r.repeat = d.repeat;
       if (d.tgt === 'row') { r.notified = false; r.nfired = []; save(); closeDp(); render(); } else { closeDp(); renderSheet(); }
       break; }
     case 'm-q': $('#m-date').value = v === 'x' ? '' : addDays(today(), +v); break;
