@@ -190,9 +190,19 @@ input,select,textarea{font:inherit;color:inherit}
 .dpgrid button.sel{background:var(--primary);color:#fff;opacity:1;font-weight:600}
 .dpchips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
 .dpchips button{padding:8px 12px;border-radius:8px;background:var(--chipsel);color:var(--primary);font-size:14px}
+.tpchips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}.tpchips button{padding:9px 12px;border-radius:8px;background:var(--chipsel);color:var(--primary);font-size:14px}
 .dpchips button.sel{background:var(--primary);color:#fff}
 .dprow{display:flex;align-items:center;gap:12px;width:100%;padding:13px 4px;border-bottom:1px solid var(--line);text-align:left}
 .dprow span{flex:1;font-size:16px}.dprow small{color:var(--sub);font-size:14px}.dprow.off{opacity:.4;pointer-events:none}
+.dprem{display:flex;align-items:center;justify-content:space-between;margin:4px 4px 14px}
+.dpsec{font-size:17px;font-weight:600;margin:6px 4px 4px}
+.dpck{display:flex;align-items:center;gap:14px;padding:9px 4px;font-size:16px}
+.dpck input{width:22px;height:22px;accent-color:var(--primary)}
+.dpdim{opacity:.4;pointer-events:none}
+.dpcu{display:flex;gap:8px;margin:0 4px 6px 40px}.dpcu input,.dpcu select{flex:1;min-width:0;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.dpcard{display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:12px;border:2px solid var(--line);margin:10px 0;font-size:16px}
+.dpcard.sel{border-color:var(--primary);background:var(--chipsel)}.dpcard.dis{opacity:.6}.dpcard small{display:block;color:var(--sub);font-size:13px;line-height:1.6;margin-top:6px}
+.dpradio{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--sub);display:block;margin-top:1px}.dpradio.on{border-color:var(--primary);box-shadow:inset 0 0 0 4px var(--card);background:var(--primary)}
 .dpfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}.dpfoot button{padding:10px 14px;color:var(--primary);font-weight:600}
 #toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);background:#222c36;color:#fff;padding:12px 20px;border-radius:24px;z-index:90;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;max-width:85%;text-align:center}
 #toast.show{opacity:1}
@@ -575,7 +585,7 @@ function rowHtml(t, grip) {
   if (t.time) meta.push(`<span class="m">${t.time}</span>`);
   if (t.cat) meta.push(`<span class="m">${esc(t.cat)}</span>`);
   if (t.repeat && t.repeat !== 'none') meta.push(`<span class="m">${ic('repeat', 13)}${{ daily: '매일', weekly: '매주', monthly: '매월' }[t.repeat]}</span>`);
-  if (t.remind !== '' && t.remind != null) meta.push(`<span class="m">${ic('bell', 13)}</span>`);
+  if (remList(t).length) meta.push(`<span class="m">${ic('bell', 13)}</span>`);
   const left = t.subs.filter(s => !s.done).length, isOpen = S.openSubs ? ui.expanded[t.id] !== false : !!ui.expanded[t.id];
   const badge = t.subs.length ? `<button class="badge ${left ? '' : 'zero'}" data-act="sub-expand" data-id="${t.id}" aria-label="하위 작업 펼치기">${left || ic('check', 13)}</button>` : '';
   const subs = t.subs.length ? `<div class="subwrap ${isOpen ? 'open' : ''}"><div class="subs">${t.subs.map((s, i) => `<div class="sub ${s.done ? 'on' : ''}"><button class="chk ${s.done ? 'on' : ''}" data-act="sub-toggle" data-id="${t.id}" data-i="${i}">${s.done ? ic('check', 11) : ''}</button><span>${esc(s.t)}</span></div>`).join('')}</div></div>` : '';
@@ -826,7 +836,7 @@ function renderSheet() {
   const d = ui.draft, el = $('#sheetslot');
   if (!d) { el.innerHTML = ''; return; }
   const act = document.activeElement && document.activeElement.id;
-  const rm = d.remind === '' || d.remind == null ? '' : REM[d.remind];
+  const rm = remList(d).map(offLabel).join(', ');
   const row = (icon, label, chip, a, plain) => `<div class="trow"><span class="ti">${ic(icon, 26)}</span><span class="tl">${label}</span><button class="tchip ${plain ? 'plain' : ''}" data-act="${a}">${chip}</button></div>`;
   el.innerHTML = `<div class="tpage"><div class="thead"><button class="iconbtn" data-act="sheet-close" aria-label="뒤로">${ic('back')}</button><button class="iconbtn" data-act="t-menu" aria-label="메뉴">${ic('dots')}</button></div>
     ${ui.tmenu ? `<div class="scrim" style="background:transparent;z-index:61" data-act="t-menu"></div><div class="menu" style="z-index:62"><button data-act="t-star"><span>${d.star ? '별표 해제' : '별표'}</span></button><button data-act="t-focus"><span>집중</span></button>${d.id ? `<button data-act="d-del" style="color:var(--danger)"><span>삭제</span></button>` : ''}</div>` : ''}
@@ -850,7 +860,7 @@ function renderSheet() {
 function commitDraft() {
   const d = ui.draft; d.title = d.title.trim(); d.subs = d.subs.filter(s => s.t.trim());
   if (!d.title) return false;
-  const rec = { ...d, remind: d.remind === '' ? '' : Number(d.remind), notified: false };
+  const rec = { ...d, remind: d.remind === '' ? '' : Number(d.remind), notified: false, nfired: [] };
   if (d.id) { const i = S.tasks.findIndex(t => t.id === d.id); S.tasks[i] = { ...S.tasks[i], ...rec }; }
   else { rec.id = uid(); rec.created = rec.order = Date.now(); rec.doneAt = null; S.tasks.push(rec); d.id = rec.id; }
   if (rec.remind !== '' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().then(() => { if (ui.page === 'settings') renderPage(); });
@@ -868,7 +878,7 @@ function taskDialog(kind) {
   const d = ui.draft, done = () => renderSheet();
   if (kind === 'cat') modal('카테고리', radioList('dc', [['', '카테고리 없음'], ...S.cats.map(c => [c, esc(c)])], d.cat), () => { d.cat = pickedVal('dc'); done(); });
   else if (kind === 'date') modal('마감일', `<input type="date" class="field" id="m-date" style="width:100%" value="${d.date || ''}"><div class="hrow" style="margin-top:12px">${[['오늘', 0], ['내일', 1], ['다음 주', 7], ['없음', 'x']].map(([l, v]) => `<button class="qbtn" data-act="m-q" data-v="${v}">${l}</button>`).join('')}</div>`, () => { d.date = $('#m-date').value; done(); });
-  else if (kind === 'time') modal('시간 & 알림', `<div class="lbl" style="margin-top:0">시간</div><input type="time" class="field" id="m-time" style="width:100%" value="${d.time || ''}"><div class="lbl">알림</div><select class="field" id="m-rem" style="width:100%">${[['', '알림 없음'], ...Object.entries(REM)].map(([v, l]) => `<option value="${v}" ${String(d.remind) === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select>`, () => { d.time = $('#m-time').value; d.remind = $('#m-rem').value; done(); });
+  else if (kind === 'time') modal('시간 & 알림', `<div class="lbl" style="margin-top:0">시간</div><input type="time" class="field" id="m-time" style="width:100%" value="${d.time || ''}"><div class="lbl">알림</div><select class="field" id="m-rem" style="width:100%">${[['', '알림 없음'], ...Object.entries(REM)].map(([v, l]) => `<option value="${v}" ${String(d.remind) === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select>`, () => { d.time = $('#m-time').value; d.remind = $('#m-rem').value; d.reminds = d.remind === '' ? [] : [Number(d.remind)]; done(); });
   else if (kind === 'repeat') modal('반복 작업', radioList('dr', Object.entries(RPT).map(([v, l]) => [v, v === 'none' ? '반복 안 함' : l]), d.repeat), () => { d.repeat = pickedVal('dr'); done(); });
   else if (kind === 'memo') modal('메모', `<textarea class="field" id="m-memo" rows="6" style="width:100%;resize:vertical" maxlength="2000">${esc(d.memo)}</textarea>`, () => { d.memo = $('#m-memo').value; done(); });
 }
@@ -895,7 +905,8 @@ function renderTp() {
   const time = t.kb ? `<input id="tp-h" type="number" inputmode="numeric" min="1" max="12" value="${t.h}"><span>:</span><input id="tp-m" type="number" inputmode="numeric" min="0" max="59" value="${p2(t.m)}">` : `<button class="${hm ? 'on' : ''}" data-act="tp-step" data-v="h">${p2(t.h)}</button><span>:</span><button class="${hm ? '' : 'on'}" data-act="tp-step" data-v="m">${p2(t.m)}</button>`;
   m.innerHTML = `<div class="tpbox"><h4>시간 설정</h4><div class="tphead"><div class="tptime" style="font-size:${t.kb ? 40 : 56}px">${time}</div><div class="tpap"><button class="${t.pm ? '' : 'on'}" data-act="tp-ampm" data-v="am">오전</button><button class="${t.pm ? 'on' : ''}" data-act="tp-ampm" data-v="pm">오후</button></div></div>
   ${t.kb ? '<div style="height:60px"></div>' : `<div class="tpclock" id="tpclock">${nums}<div class="hand" style="width:92px;transform:rotate(${ang - 90}deg)"></div><div class="dot"></div></div>`}
-  <div class="tpfoot"><button data-act="tp-kb" aria-label="키보드 입력">⌨️</button><span class="sp"></span><button data-act="tp-del">삭제</button><button data-act="tp-cancel">취소</button><button data-act="tp-save">저장</button></div></div>`;
+  ${t.dp ? `<div class="tpchips">${[['', '시간 없다'], ['07:00', '07:00 오전'], ['09:00', '09:00 오전'], ['10:00', '10:00 오전'], ['12:00', '12:00 오후'], ['14:00', '02:00 오후'], ['16:00', '04:00 오후'], ['18:00', '06:00 오후']].map(([v, l]) => `<button data-act="dp-time-chip" data-v="${v}">${l}</button>`).join('')}</div>` : ''}
+  <div class="tpfoot"><button data-act="tp-kb" aria-label="키보드 입력">⌨️</button><span class="sp"></span>${t.dp ? '' : '<button data-act="tp-del">삭제</button>'}<button data-act="tp-cancel">취소</button><button data-act="${t.dp ? 'tp-save' : 'tp-save'}">${t.dp ? '완료' : '저장'}</button></div></div>`;
   m.classList.add('open'); modalCb = null;
 }
 const tpPick = e => {
@@ -910,15 +921,26 @@ document.addEventListener('pointerup', () => { if (ui.tpDrag) { ui.tpDrag = fals
 /* ---------- 날짜 선택 팝업 (날짜/시간/알림/반복) ---------- */
 function openDp(tgt, id) {
   const r = tgt === 'row' ? byId(id) : ui.draft, dt = parse(r.date || today());
-  ui.dp = { tgt, id, y: dt.getFullYear(), m: dt.getMonth(), date: r.date || '', time: r.time || '', remind: r.remind === undefined ? '' : r.remind, repeat: r.repeat || 'none', sub: null };
+  ui.dp = { tgt, id, y: dt.getFullYear(), m: dt.getMonth(), date: r.date || '', time: r.time || '', reminds: remList(r).slice(), rs: null, repeat: r.repeat || 'none', sub: null };
   renderDp();
 }
 function renderDp() {
   const d = ui.dp, m = $('#modal'), td = today(), sun = (() => { const n = parse(td).getDay(); return addDays(td, n === 0 ? 7 : 7 - n); })();
-  if (d.sub) {
-    const items = d.sub === 'rem' ? Object.entries(REM) : Object.entries(RPT).map(([v, l]) => [v, v === 'none' ? '반복 안 함' : l]);
-    const cur = d.sub === 'rem' ? d.remind : d.repeat;
-    m.innerHTML = `<div class="dpbox"><h4 style="margin:0 0 8px;font-size:18px">${d.sub === 'rem' ? '알림' : '반복'}</h4>${(d.sub === 'rem' ? [['', '알림 없음'], ...items] : items).map(([v, l]) => `<label style="display:flex;gap:12px;padding:11px 0;align-items:center"><input type="radio" name="dpo" value="${v}" data-act="dp-opt" data-v="${v}" ${String(cur) === String(v) ? 'checked' : ''}><span>${l}</span></label>`).join('')}<div class="dpfoot"><button data-act="dp-back">닫기</button></div></div>`;
+  if (d.sub === 'rem') {
+    const rs = d.rs, PRE = [0, 5, 15, 30, 1440];
+    const cb = (on, label, act, v) => `<label class="dpck"><input type="checkbox" ${on ? 'checked' : ''} data-act="${act}" data-v="${v}"><span>${label}</span></label>`;
+    m.innerHTML = `<div class="dpbox"><div class="dprem"><h4 style="margin:0;font-size:20px">알림</h4><button class="switch ${rs.on ? 'on' : ''}" data-act="dpr-on" aria-label="알림 켜기/끄기"></button></div>
+    <div class="${rs.on ? '' : 'dpdim'}"><div class="dpsec">알림 시간</div>${PRE.map(o => cb(rs.sel.includes(o), offLabel(o), 'dpr-pre', o)).join('')}
+    ${cb(rs.cu.on, '시간 사용자 지정', 'dpr-cu', 'x')}
+    ${rs.cu.on ? `<div class="dpcu"><input type="number" inputmode="numeric" min="1" id="dpr-n" value="${rs.cu.n}"><select id="dpr-u"><option value="1" ${rs.cu.u === 1 ? 'selected' : ''}>분 전</option><option value="60" ${rs.cu.u === 60 ? 'selected' : ''}>시간 전</option><option value="1440" ${rs.cu.u === 1440 ? 'selected' : ''}>일 전</option></select></div>` : ''}</div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="dpsec">알림 유형</div>
+    <div class="dpcard sel"><i class="dpradio on"></i><span>표준 알림</span></div>
+    <div class="dpcard dis"><i class="dpradio"></i><div><span>향상된 미리 알림 👑</span><small>잠금 화면 미리 알림<br>연속 벨소리 맞춤 설정<br>미리 알림 레이아웃 맞춤 설정</small></div></div>
+    <div class="dpfoot"><button data-act="dp-back">취소</button><button data-act="dpr-ok">완료</button></div></div>`;
+    m.classList.add('open'); modalCb = null; return;
+  }
+  if (d.sub === 'rpt') {
+    m.innerHTML = `<div class="dpbox"><h4 style="margin:0 0 8px;font-size:18px">반복</h4>${Object.entries(RPT).map(([v, l]) => `<label style="display:flex;gap:12px;padding:11px 0;align-items:center"><input type="radio" name="dpo" value="${v}" data-act="dp-opt" data-v="${v}" ${d.repeat === v ? 'checked' : ''}><span>${v === 'none' ? '반복 안 함' : l}</span></label>`).join('')}<div class="dpfoot"><button data-act="dp-back">닫기</button></div></div>`;
     m.classList.add('open'); modalCb = null; return;
   }
   const first = new Date(d.y, d.m, 1), start = new Date(d.y, d.m, 1 - first.getDay());
@@ -926,7 +948,7 @@ function renderDp() {
   for (let i = 0; i < 42; i++) { const c = new Date(start); c.setDate(start.getDate() + i); const s2 = ymd(c); cells += `<button class="${c.getMonth() !== d.m ? 'o' : ''} ${s2 === td ? 'td' : ''} ${s2 === d.date ? 'sel' : ''}" data-act="dp-day" data-v="${s2}">${c.getDate()}</button>`; }
   const chip = (l, v) => `<button class="${d.date === v ? 'sel' : ''}" data-act="dp-day" data-v="${v}">${l}</button>`;
   const tm = d.time ? (+d.time.slice(0, 2) >= 12 ? '오후 ' : '오전 ') + ((+d.time.slice(0, 2)) % 12 || 12) + ':' + d.time.slice(3) : '아니요';
-  const rm = d.time && d.remind !== '' && d.remind != null ? REM[d.remind] : '아니요';
+  const rm = d.time && d.reminds.length ? d.reminds.map(offLabel).join(', ') : '아니요';
   m.innerHTML = `<div class="dpbox"><div class="dpmon"><button data-act="dp-mon" data-v="-1" aria-label="이전 달">◀</button><span>${d.y}년 ${d.m + 1}월</span><button data-act="dp-mon" data-v="1" aria-label="다음 달">▶</button></div>
   <div class="dpgrid">${'일월화수목금토'.split('').map(w => `<b>${w}</b>`).join('')}${cells}</div>
   <div class="dpchips">${chip('오늘', td)}${chip('내일', addDays(td, 1))}${chip('3일 후', addDays(td, 3))}${chip('이번 주 일요일', sun)}${chip('날짜 없음', '')}</div>
@@ -1043,13 +1065,21 @@ setInterval(() => {
   }
 }, 250);
 /* 알림 확인 */
+const remList = t => Array.isArray(t.reminds) ? t.reminds : (t.remind === '' || t.remind == null ? [] : [Number(t.remind)]);
+const offLabel = n => n === 0 ? '작업 시간에' : n % 1440 === 0 ? n / 1440 + '일 전' : n % 60 === 0 ? n / 60 + '시간 전' : n + '분 전';
 function checkReminders() {
   const now = Date.now(); let ch = false;
   S.tasks.forEach(t => {
-    if (t.done || t.notified || !t.date || t.remind === '' || t.remind == null) return;
+    const offs = remList(t);
+    if (t.done || t.notified || !t.date || !offs.length) return;
     const [h, m] = (t.time || '09:00').split(':').map(Number), at = parse(t.date); at.setHours(h, m, 0, 0);
-    const fire = at.getTime() - t.remind * 60000;
-    if (now >= fire && now < fire + 6 * 3600e3) { t.notified = true; ch = true; notify(t.title, t.remind ? `${t.remind >= 60 ? t.remind / 60 + '시간' : t.remind + '분'} 후 시작` : '지금 시작할 시간이에요'); }
+    t.nfired = t.nfired || [];
+    offs.forEach(o => {
+      if (t.nfired.includes(o)) return;
+      const fire = at.getTime() - o * 60000;
+      if (now >= fire && now < fire + 6 * 3600e3) { t.nfired.push(o); ch = true; notify(t.title, o ? `${offLabel(o).replace(' 전', '')} 후 시작` : '지금 시작할 시간이에요'); }
+    });
+    if (offs.every(o => t.nfired.includes(o))) t.notified = true;
   });
   if (ch) save();
 }
@@ -1122,14 +1152,22 @@ document.addEventListener('click', e => {
     case 'dp-mon': { const d = ui.dp, n = new Date(d.y, d.m + +v, 1); d.y = n.getFullYear(); d.m = n.getMonth(); renderDp(); break; }
     case 'dp-day': { const d = ui.dp; d.date = v; if (v) { const n = parse(v); d.y = n.getFullYear(); d.m = n.getMonth(); } renderDp(); break; }
     case 'dp-time': { const d = ui.dp, t = d.time || '09:00', H = +t.slice(0, 2); ui.tp = { k: -1, dp: true, h: H % 12 || 12, m: +t.slice(3), pm: H >= 12, step: 'h', kb: false }; renderTp(); break; }
-    case 'dp-sub': ui.dp.sub = v; renderDp(); break;
-    case 'dp-opt': { const d = ui.dp; if (d.sub === 'rem') d.remind = v === '' ? '' : +v; else d.repeat = v; d.sub = null; renderDp(); break; }
+    case 'dp-sub': { const d = ui.dp; d.sub = v; if (v === 'rem') { const PRE = [0, 5, 15, 30, 1440], cu = d.reminds.find(o => !PRE.includes(o)), u = cu ? (cu % 1440 === 0 ? 1440 : cu % 60 === 0 ? 60 : 1) : 1; d.rs = { on: d.reminds.length > 0, sel: d.reminds.filter(o => PRE.includes(o)), cu: { on: cu != null, n: cu ? cu / u : 10, u } }; } renderDp(); break; }
+    case 'dpr-on': { const rs = ui.dp.rs; rs.on = !rs.on; if (rs.on && !rs.sel.length && !rs.cu.on) rs.sel = [5]; renderDp(); break; }
+    case 'dpr-pre': { const rs = ui.dp.rs, o = +v, i = rs.sel.indexOf(o); if (i < 0) rs.sel.push(o); else rs.sel.splice(i, 1); break; }
+    case 'dpr-cu': { const rs = ui.dp.rs; rs.cu.on = !rs.cu.on; renderDp(); break; }
+    case 'dpr-ok': {
+      const d = ui.dp, rs = d.rs; let list = rs.on ? rs.sel.slice() : [];
+      if (rs.on && rs.cu.on) { const n = Math.round(+$('#dpr-n').value), u = +$('#dpr-u').value; if (!(n >= 1)) { toast('사용자 지정 시간을 1 이상으로 입력하세요'); break; } list.push(n * u); }
+      d.reminds = [...new Set(list)].sort((a, b) => a - b); d.sub = null; renderDp(); break; }
+    case 'dp-time-chip': { const t = ui.tp; if (v === '') { ui.dp.time = ''; ui.tp = null; renderDp(); break; } const H = +v.slice(0, 2); t.h = H % 12 || 12; t.m = +v.slice(3); t.pm = H >= 12; t.kb = false; renderTp(); break; }
+    case 'dp-opt': { const d = ui.dp; d.repeat = v; d.sub = null; renderDp(); break; }
     case 'dp-back': ui.dp.sub = null; renderDp(); break;
     case 'dp-cancel': closeDp(); break;
     case 'dp-ok': {
       const d = ui.dp, r = d.tgt === 'row' ? byId(d.id) : ui.draft;
-      r.date = d.date || null; r.time = d.time; r.remind = d.time ? d.remind : ''; r.repeat = d.repeat;
-      if (d.tgt === 'row') { r.notified = false; save(); closeDp(); render(); } else { closeDp(); renderSheet(); }
+      r.date = d.date || null; r.time = d.time; r.reminds = d.time ? d.reminds.slice() : []; r.remind = r.reminds.length ? r.reminds[0] : ''; r.repeat = d.repeat;
+      if (d.tgt === 'row') { r.notified = false; r.nfired = []; save(); closeDp(); render(); } else { closeDp(); renderSheet(); }
       break; }
     case 'm-q': $('#m-date').value = v === 'x' ? '' : addDays(today(), +v); break;
     case 'prio-pick': ui.prioFor = id; renderPrio(); break;
