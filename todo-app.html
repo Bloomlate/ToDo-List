@@ -26,12 +26,15 @@ input,select,textarea{font:inherit;color:inherit}
 @media(min-width:500px){.app{height:min(calc(100dvh - 40px),860px);margin:20px auto;border-radius:28px;box-shadow:0 20px 60px rgba(30,60,90,.25)}}
 .ic{flex:none;display:block}
 #topbar{flex:none;min-height:56px;padding:10px 12px 4px;display:flex;align-items:center;gap:8px}
-.chips{display:flex;gap:10px;overflow-x:auto;flex:1;scrollbar-width:none;padding:2px 0}
+.chips{display:flex;gap:10px;overflow-x:auto;flex:1;scrollbar-width:none;padding:6px 6px}
 .chips::-webkit-scrollbar{display:none}
 .chips.wrap{flex-wrap:wrap;overflow-x:visible;gap:8px}
 #topbar:has(.chips.wrap){align-items:flex-start}#topbar:has(.chips.wrap) .chips{min-width:0}
 .chip{flex:none;padding:8px 18px;border-radius:20px;background:var(--chip);color:var(--sub);font-size:15px}
 .chip.sel{background:var(--chipsel);color:var(--primary);font-weight:700}
+.chip.cc{background:color-mix(in srgb,var(--cc) 30%,var(--bg));color:var(--text)}
+.chip.cc.sel{background:var(--cc);color:var(--ct);font-weight:700;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--cc),0 3px 8px rgba(0,0,0,.22)}
+.chip.cc.all{--cc:var(--primary);--ct:#fff}
 .chip.add{padding:8px 12px}
 .iconbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--sub);flex:none}
 .iconbtn:active{background:var(--chip)}
@@ -467,6 +470,7 @@ function load() {
   return defaults();
 }
 let S = load();
+const textOn = hex => { const n = parseInt(hex.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; return l > 0.62 ? '#1d232b' : '#fff'; };
 const catColor = c => (S.catCol && S.catCol[c]) || CATCOL[Math.max(0, S.cats.indexOf(c)) % CATCOL.length];
 const newCatColor = () => CATPAL.find(c => !S.cats.some(n => (S.catCol || {})[n] === c)) || CATPAL[S.cats.length % CATPAL.length];
 function addCat(n) { if (!S.catCol) S.catCol = {}; S.catCol[n] = newCatColor(); S.cats.push(n); }
@@ -615,7 +619,7 @@ function renderTop() {
   let h = '';
   if (ui.tab === 'tasks') {
     h = `<div class="iconbtn" style="display:none"></div><div class="chips ${S.catWrap ? 'wrap' : ''}">
-      ${['모두', ...S.cats].map(c => `<button class="chip ${ui.cat === c ? 'sel' : ''}" data-act="cat" data-v="${esc(c)}">${c === '모두' ? '' : `<i class="cd" style="background:${catColor(c)}"></i>`}${esc(c)}</button>`).join('')}
+      ${['모두', ...S.cats].map(c => { const k = c === '모두' ? null : catColor(c); return `<button class="chip cc ${k ? '' : 'all'} ${ui.cat === c ? 'sel' : ''}" ${k ? `style="--cc:${k};--ct:${textOn(k)}"` : ''} data-act="cat" data-v="${esc(c)}">${esc(c)}</button>`; }).join('')}
       <button class="chip add" data-act="cat-add" aria-label="카테고리 추가">${ic('plus', 18)}</button></div>
       <button class="iconbtn" data-act="menu-toggle" aria-label="메뉴">${ic('dots')}</button>`;
   } else if (ui.tab === 'store') {
@@ -660,7 +664,7 @@ function rowHtml(t, grip, grp) {
   const isLate = t.date && t.date < td && !t.done;
   if (t.date && t.date !== td && !(grp === 'tomorrow' && t.date === addDays(td, 1))) meta.push(`<span class="m ${isLate ? 'late' : ''}">${ic('cal', 13)}${relDate(t.date)}</span>`);
   if (t.time) meta.push(`<span class="m ${isLate ? 'late' : ''}">${t.time}</span>`);
-  if (t.cat) meta.push(`<span class="m cat">${esc(t.cat)}</span>`);
+  else if (t.date) meta.push(`<span class="m ${isLate ? 'late' : ''}">시간 지정 없음</span>`);
   if (t.repeat && t.repeat !== 'none') meta.push(`<span class="m">${ic('repeat', 13)}${{ daily: '매일', weekly: '매주', monthly: '매월' }[t.repeat]}</span>`);
   if (t.wait) { meta.push(`<span class="m wt">${ic('hourglass', 13)}${esc(t.wait.who)}</span>`); if (t.wait.chk) meta.push(`<span class="m wt">${ic('cal', 13)}확인 ${t.wait.chk.slice(5).replace('-', '/')}</span>`); }
   if (t.back && !t.done) meta.push(`<span class="m back">회신 확인${t.back.who ? ' · ' + esc(t.back.who) : ''}</span>`);
