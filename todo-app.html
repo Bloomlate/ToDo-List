@@ -312,8 +312,6 @@ input,select,textarea{font:inherit;color:inherit}
 .snd h3{margin:0;font-size:22px;display:flex;align-items:center;justify-content:space-between}
 .sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px 12px;margin:26px 0 22px}
 .sgrid button{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:15px;color:var(--sub)}
-.stile{position:relative;width:100%;aspect-ratio:4/3;border-radius:12px;display:grid;place-items:center;font-size:30px;color:#fff}
-.stile .ok{position:absolute;right:-5px;bottom:-5px;width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;border:2px solid var(--bg)}
 .sgrid button.sel{color:var(--text);font-weight:600}
 .tstep{display:flex;align-items:center;justify-content:space-between;margin:26px 0 22px}
 .tstep>button{width:56px;height:56px;border-radius:50%;background:color-mix(in srgb,var(--primary) 14%,var(--bg));color:var(--primary);display:grid;place-items:center}
@@ -322,8 +320,6 @@ input,select,textarea{font:inherit;color:inherit}
 .tstep input::-webkit-outer-spin-button,.tstep input::-webkit-inner-spin-button{-webkit-appearance:none}
 .sgrid button.pre{padding:13px 0;border-radius:14px;background:color-mix(in srgb,var(--primary) 10%,var(--bg));font-size:16px}
 .sgrid button.pre.sel{background:var(--primary);color:#fff}
-.sauto{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px}
-.sauto b{display:block;font-size:19px;font-weight:600}.sauto small{color:var(--sub);font-size:15px}
 .fpage{display:flex;flex-direction:column;align-items:center;padding-bottom:36px}
 .seg{display:flex;background:color-mix(in srgb,var(--primary) 14%,var(--bg));border-radius:26px;margin-top:34px}
 .seg button{padding:16px 36px;border-radius:26px;color:var(--sub);font-size:17px}
@@ -468,9 +464,8 @@ const I = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   clip: '<path d="M20 11l-8 8a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a2 2 0 01-3-3l8-8"/>',
   memo: '<path d="M4 4h16v12H9l-5 4z"/><path d="M8 8.5h8M8 12h5"/>',
-  mute: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/>',
+  bellOff: '<path d="M6 17v-6a6 6 0 0112 0v6l2 2H4zM10 21h4M3 3l18 18"/>',
   doc: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 13h8M8 17h4"/>',
-  music: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.8"/><circle cx="16.5" cy="16" r="2.8"/>',
   back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
   play: '<path d="M8 5l11 7-11 7z" fill="currentColor"/>',
   pause: '<path d="M8 5v14M16 5v14"/>'
@@ -486,7 +481,7 @@ const navIc = {
 
 /* ---------- 상태 / 저장 ---------- */
 const KEY = 'todo-app-v1';
-const defaults = () => ({ tasks: [], cats: ['작업', '개인', '위시리스트', '생일'], catCol: { '작업': '#0a8cff', '개인': '#7c6cf0', '위시리스트': '#f06292', '생일': '#ffb300' }, habits: [], store: [], focus: [], theme: 'light', accent: '#0a8cff', bg: { t: 'color' }, customBg: '', openSubs: false, sort: 'manual', seenDot: false, sound: 'none', autoSound: false, ver: 2 });
+const defaults = () => ({ tasks: [], cats: ['작업', '개인', '위시리스트', '생일'], catCol: { '작업': '#0a8cff', '개인': '#7c6cf0', '위시리스트': '#f06292', '생일': '#ffb300' }, habits: [], store: [], focus: [], theme: 'light', accent: '#0a8cff', bg: { t: 'color' }, customBg: '', openSubs: false, sort: 'manual', seenDot: false, bell: true, ver: 2 });
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
@@ -530,7 +525,7 @@ function saveView() {
   const j = JSON.stringify({ cat: ui.cat, tab: ui.tab, collapsed: ui.collapsed });
   if (j !== lastView) { lastView = j; try { localStorage.setItem(VKEY, j); } catch (e) {} }
 }
-const F = { mode: 'timer', dur: S.focusDur || 15, left: (S.focusDur || 15) * 60, running: false, endAt: 0, base: 0, t0: 0, taskId: '', sound: true };
+const F = { mode: 'timer', dur: S.focusDur || 15, left: (S.focusDur || 15) * 60, running: false, endAt: 0, base: 0, t0: 0, taskId: '' };
 const fElapsed = () => F.base + (F.running ? (Date.now() - F.t0) / 1000 : 0);
 const fStarted = () => F.running || (F.mode === 'timer' ? F.left < F.dur * 60 : F.base > 0);
 
@@ -976,7 +971,7 @@ function renderPage() {
   const el = $('#page');
   if (!ui.page) { el.classList.remove('open'); return; }
   const keep = el.querySelector('.pbody'), st = keep ? keep.scrollTop : 0;
-  const right = ui.page === 'focus' ? `<button class="iconbtn" data-act="focus-log" aria-label="집중 기록">${ic('doc', 24)}</button><button class="iconbtn" data-act="snd-open" aria-label="집중 사운드">${ic('music', 24)}</button>` : '';
+  const right = ui.page === 'focus' ? `<button class="iconbtn" data-act="focus-log" aria-label="집중 기록">${ic('doc', 24)}</button><button class="iconbtn" data-act="bell-toggle" aria-label="${S.bell === false ? '알림음 꺼짐' : '알림음 켜짐'}" aria-pressed="${S.bell !== false}">${ic(S.bell === false ? 'bellOff' : 'bell', 24)}</button>` : '';
   el.innerHTML = `<div class="phead"><button class="iconbtn" data-act="page-back">${ic('back')}</button><h2>${ui.page === 'habitnew' ? HCATS[ui.hd.ci][1][ui.hd.ii][1] : PT[ui.page]}</h2>${right}</div><div class="pbody ${ui.page === 'focus' ? 'fpage' : ''}">${pageBody()}</div>`;
   el.querySelector('.pbody').scrollTop = st;
   el.classList.add('open');
@@ -1195,57 +1190,9 @@ function render() {
   saveView(); applyTheme(); renderTop(); renderNav(); renderMain(); renderPage(); renderDrawer(); renderSheet(); renderPrio();
 }
 
-/* ---------- 집중 사운드 (WebAudio로 합성, 파일 없이 동작) ---------- */
-const SOUNDS = [
-  ['none', '없음'],
-  ['rain', '비', '🌧️', 'linear-gradient(160deg,#5b7b96,#223a4d)'],
-  ['bird', '새', '🐦', 'linear-gradient(160deg,#9fd4ff,#7bb86f)'],
-  ['sea', '바다', '🌊', 'linear-gradient(160deg,#ffcf7a,#1f86c9)'],
-  ['forest', '숲', '🌲', 'linear-gradient(160deg,#cfe0c8,#4d7a5a)'],
-  ['stream', '시냇물', '💧', 'linear-gradient(160deg,#7fc4a0,#2f7d8f)'],
-  ['fire', '모닥불', '🔥', 'linear-gradient(160deg,#3a2a22,#d4561c)'],
-  ['cafe', '카페', '☕', 'linear-gradient(160deg,#f1d9b5,#b9824f)']
-];
-let AC = null, SND = null; const NB = {};
-function noiseSrc(ctx, brown) {
-  const k = brown ? 'b' : 'w';
-  if (!NB[k] || NB[k].sr !== ctx.sampleRate) {
-    const len = ctx.sampleRate * 3, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0); let last = 0;
-    for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; if (brown) { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; } else d[i] = w; }
-    NB[k] = { buf, sr: ctx.sampleRate };
-  }
-  const s = ctx.createBufferSource(); s.buffer = NB[k].buf; s.loop = true; return s;
-}
-function stopSound() {
-  if (!SND) return; const s = SND; SND = null;
-  s.timers.forEach(clearTimeout);
-  try { s.master.gain.setTargetAtTime(0, AC.currentTime, .08); } catch (e) {}
-  setTimeout(() => s.nodes.forEach(n => { try { n.stop && n.stop(); } catch (e) {} try { n.disconnect(); } catch (e) {} }), 400);
-}
-function playSound(id) {
-  stopSound(); if (id === 'none') return;
-  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) { return; }
-  const c = AC, master = c.createGain(); master.gain.value = 0; master.gain.setTargetAtTime(.7, c.currentTime, .3); master.connect(c.destination);
-  const s = SND = { master, nodes: [master], timers: [] };
-  const rnd = (a, b) => a + Math.random() * (b - a);
-  const filt = (type, f, q = 1) => { const n = c.createBiquadFilter(); n.type = type; n.frequency.value = f; n.Q.value = q; return n; };
-  const gain = v => { const g = c.createGain(); g.gain.value = v; return g; };
-  const chain = (src, ...nodes) => { s.nodes.push(src, ...nodes); src.start(); let p = src; nodes.forEach(n => { p.connect(n); p = n; }); p.connect(master); return p; };
-  const lfo = (rate, depth, param) => { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = rate; g.gain.value = depth; o.connect(g); g.connect(param); o.start(); s.nodes.push(o, g); };
-  const every = (fn, a, b) => { const loop = () => { if (SND !== s) return; fn(); s.timers.push(setTimeout(loop, rnd(a, b))); }; s.timers.push(setTimeout(loop, rnd(a, b))); };
-  const tone = (f0, f1, vol, dur, start = 0) => { const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + start; o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur * .7); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + dur); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .05); };
-  const chirp = base => { const n = Math.floor(rnd(2, 5)); for (let i = 0; i < n; i++) { const f = base * rnd(.9, 1.15); tone(f, f * 1.5, .12, .12, i * .16); } };
-  const burst = (hp, vol, dur) => { const n = noiseSrc(c, false), g = c.createGain(), f = filt('highpass', hp), t = c.currentTime; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur); n.connect(f); f.connect(g); g.connect(master); n.start(t); n.stop(t + dur + .05); };
-  const W = () => noiseSrc(c, false), B = () => noiseSrc(c, true);
-  if (id === 'rain') { chain(W(), filt('highpass', 700), filt('lowpass', 9000), gain(.3)); chain(B(), filt('lowpass', 300), gain(.5)); }
-  else if (id === 'sea') { const g = chain(B(), filt('lowpass', 700), gain(.55)); lfo(.12, .4, g.gain); }
-  else if (id === 'forest') { chain(B(), filt('lowpass', 500), gain(.3)); chain(W(), filt('bandpass', 2500, .5), gain(.03)); every(() => chirp(rnd(2200, 3500)), 3000, 8000); }
-  else if (id === 'bird') { chain(B(), filt('lowpass', 400), gain(.12)); every(() => chirp(rnd(2500, 4200)), 900, 2600); }
-  else if (id === 'stream') { const a = chain(W(), filt('bandpass', 1400, .6), gain(.35)); lfo(3.1, .12, a.gain); const b = chain(W(), filt('bandpass', 3200, .8), gain(.12)); lfo(5.3, .06, b.gain); chain(B(), filt('lowpass', 250), gain(.3)); }
-  else if (id === 'fire') { chain(B(), filt('lowpass', 450), gain(.6)); every(() => burst(rnd(1500, 4000), rnd(.15, .5), rnd(.02, .08)), 60, 380); }
-  else if (id === 'cafe') { const g = chain(B(), filt('lowpass', 700), gain(.35)); lfo(.2, .1, g.gain); chain(W(), filt('bandpass', 1200, .4), gain(.05)); every(() => tone(rnd(2400, 3600), rnd(2400, 3600), .06, .3), 3000, 8000); }
-}
-function renderSound() {
+let AC = null;
+/* ---------- 시간 편집 시트 ---------- */
+function renderTimeSheet() {
   const el = $('#sndslot');
   if (ui.timeOpen) {
     const m = ui.tmin;
@@ -1255,17 +1202,13 @@ function renderSound() {
       <button class="btn pri" style="width:100%;height:54px;border-radius:27px;font-size:18px" data-act="tm-ok">확인</button></div></div>`;
     return;
   }
-  if (!ui.sndOpen) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="sndwrap"><div class="scrim" data-act="snd-close"></div><div class="snd"><h3>집중 사운드<button class="iconbtn" data-act="snd-close" aria-label="닫기">${ic('close', 26)}</button></h3>
-    <div class="sgrid">${SOUNDS.map(([id, l, emo, bg]) => `<button class="${S.sound === id ? 'sel' : ''}" data-act="snd-pick" data-v="${id}"><div class="stile" style="background:${bg || 'var(--chip)'};${id === 'none' ? 'color:var(--sub)' : ''}">${id === 'none' ? ic('mute', 34) : emo}${S.sound === id ? `<span class="ok">${ic('check', 15)}</span>` : ''}</div>${l}</button>`).join('')}</div>
-    <div class="sauto"><div><b>집중 시 자동 재생</b><small>선택한 소리를 자동 재생합니다.</small></div><button data-act="snd-auto" aria-label="자동 재생"><i class="switch ${S.autoSound ? 'on' : ''}" style="display:block"></i></button></div></div></div>`;
+  el.innerHTML = '';
 }
 function renderPrio() {
   const el = $('#prioslot'), t = ui.prioFor && byId(ui.prioFor);
   if (!t) { el.innerHTML = ''; return; }
   el.innerHTML = `<div class="sndwrap"><div class="scrim" data-act="prio-close"></div><div class="ppop"><h4>우선순위</h4><div class="opts">${[1, 2, 3].map(r => `<button class="${t.prio === r ? 'sel' : ''}" data-act="prio-set" data-v="${r}">${medal(r, 44)}${r}순위</button>`).join('')}</div></div></div>`;
 }
-function closeSound() { ui.sndOpen = false; renderSound(); if (!(F.running && S.autoSound)) stopSound(); }
 
 /* ---------- 집중 타이머 ---------- */
 function updateTimer() {
@@ -1279,7 +1222,10 @@ function updateTimer() {
   const k = $('#knob'); if (k) k.setAttribute('transform', `rotate(${f * 360} 150 150)`);
 }
 function recordFocus(min) { if (min >= 1) { S.focus.push({ ts: Date.now(), min, taskId: F.taskId, mode: F.mode }); save(); } }
-function beep() { if (!F.sound) return; try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value = 880; g.gain.setValueAtTime(.2, c.currentTime); g.gain.exponentialRampToValueAtTime(.001, c.currentTime + .8); o.start(); o.stop(c.currentTime + .8); } catch (e) {} }
+function beep() {
+  if (S.bell !== false) try { const c = AC = AC || new (window.AudioContext || window.webkitAudioContext)(); c.resume(); [660, 880].forEach((f, i) => { const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + i * .22; o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(c.destination); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.18, t + .04); g.gain.exponentialRampToValueAtTime(.0001, t + .7); o.start(t); o.stop(t + .75); }); } catch (e) {}
+  if (navigator.vibrate) try { navigator.vibrate([300, 150, 300]); } catch (e) {}
+}
 const ALERTS = { sound: '소리', vibrate: '진동', both: '소리+진동' }, VIB = [400, 200, 400, 200, 400];
 function alertFx(mode) {
   if (mode !== 'vibrate') try { const c = AC = AC || new (window.AudioContext || window.webkitAudioContext)(); c.resume(); [0, .45, .9].forEach(t0 => { const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = 880; o.connect(g); g.connect(c.destination); const t = c.currentTime + t0; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.35, t + .03); g.gain.exponentialRampToValueAtTime(.0001, t + .35); o.start(t); o.stop(t + .4); }); } catch (e) {}
@@ -1293,7 +1239,7 @@ setInterval(() => {
   if (F.running && F.mode === 'sw') updateTimer();
   else if (F.running) {
     F.left = Math.ceil((F.endAt - Date.now()) / 1000);
-    if (F.left <= 0) { F.running = false; stopSound(); recordFocus(F.dur); F.left = F.dur * 60; notify('집중 완료!', F.dur + '분 집중했어요'); if (ui.page === 'focus') renderPage(); if (ui.tab === 'me') renderMain(); }
+    if (F.left <= 0) { F.running = false; recordFocus(F.dur); F.left = F.dur * 60; notify('집중 완료!', F.dur + '분 집중했어요'); if (ui.page === 'focus') renderPage(); if (ui.tab === 'me') renderMain(); }
     else updateTimer();
   }
 }, 250);
@@ -1647,23 +1593,19 @@ document.addEventListener('click', e => {
       modal('작업 선택', `<div style="max-height:46vh;overflow-y:auto">${[{ id: '', title: '선택 안 함' }, ...open].map(t => `<label style="display:flex;gap:12px;padding:11px 0;align-items:center"><input type="radio" name="fpick" value="${t.id}" ${F.taskId === t.id ? 'checked' : ''}><span style="word-break:break-word">${esc(t.title)}</span></label>`).join('')}</div>`, () => { F.taskId = document.querySelector('input[name=fpick]:checked').value; renderPage(); });
       break;
     }
-    case 'focus-edit': if (F.running || fStarted()) toast('진행 중에는 시간을 바꿀 수 없어요'); else { ui.timeOpen = true; ui.tmin = F.dur; renderSound(); } break;
-    case 'tm-close': ui.timeOpen = false; renderSound(); break;
-    case 'tm-preset': ui.tmin = +v; renderSound(); break;
-    case 'tm-step': ui.tmin = Math.min(180, Math.max(1, (Math.round(+$('#tm-in').value) || ui.tmin) + +v)); renderSound(); break;
-    case 'tm-ok': { const n = Math.round(+$('#tm-in').value); if (!(n >= 1 && n <= 180)) { toast('1~180분 사이로 입력하세요'); break; } F.dur = n; F.left = n * 60; S.focusDur = n; save(); ui.timeOpen = false; renderSound(); renderPage(); break; }
+    case 'focus-edit': if (F.running || fStarted()) toast('진행 중에는 시간을 바꿀 수 없어요'); else { ui.timeOpen = true; ui.tmin = F.dur; renderTimeSheet(); } break;
+    case 'tm-close': ui.timeOpen = false; renderTimeSheet(); break;
+    case 'tm-preset': ui.tmin = +v; renderTimeSheet(); break;
+    case 'tm-step': ui.tmin = Math.min(180, Math.max(1, (Math.round(+$('#tm-in').value) || ui.tmin) + +v)); renderTimeSheet(); break;
+    case 'tm-ok': { const n = Math.round(+$('#tm-in').value); if (!(n >= 1 && n <= 180)) { toast('1~180분 사이로 입력하세요'); break; } F.dur = n; F.left = n * 60; S.focusDur = n; save(); ui.timeOpen = false; renderTimeSheet(); renderPage(); break; }
     case 'focus-toggle':
       if (F.mode === 'sw') { if (F.running) { F.base = fElapsed(); F.running = false; } else { F.t0 = Date.now(); F.running = true; } }
       else if (F.running) { F.running = false; F.left = Math.ceil((F.endAt - Date.now()) / 1000); }
       else { F.running = true; F.endAt = Date.now() + F.left * 1000; if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }
-      if (F.running) { if (S.autoSound && S.sound !== 'none') playSound(S.sound); } else stopSound();
       renderPage(); break;
-    case 'focus-stop': { const sec = F.mode === 'sw' ? fElapsed() : F.dur * 60 - F.left, min = Math.floor(sec / 60); if (min >= 1) { recordFocus(min); toast(min + '분 집중 기록을 저장했어요'); } else toast('1분 미만은 기록되지 않아요'); stopSound(); F.running = false; F.left = F.dur * 60; F.base = 0; renderPage(); break; }
+    case 'focus-stop': { const sec = F.mode === 'sw' ? fElapsed() : F.dur * 60 - F.left, min = Math.floor(sec / 60); if (min >= 1) { recordFocus(min); toast(min + '분 집중 기록을 저장했어요'); } else toast('1분 미만은 기록되지 않아요'); F.running = false; F.left = F.dur * 60; F.base = 0; renderPage(); break; }
     case 'focus-log': ui.page = 'focuslog'; render(); break;
-    case 'snd-open': ui.sndOpen = true; renderSound(); break;
-    case 'snd-close': closeSound(); break;
-    case 'snd-pick': S.sound = v; save(); playSound(v); renderSound(); break;
-    case 'snd-auto': S.autoSound = !S.autoSound; save(); renderSound(); break;
+    case 'bell-toggle': S.bell = S.bell === false; save(); toast(S.bell === false ? '알림음 꺼짐' : '알림음 켜짐'); renderPage(); break;
   }
   if (!['tab', 'menu-toggle'].includes(act) && ui.menu && act !== 'menu-sort' && act !== 'menu-subs') { ui.menu = false; renderTop(); }
   if (ui.openRow === null) { /* 닫힘 상태 반영 */ }
@@ -1696,7 +1638,7 @@ document.addEventListener('keydown', e => {
     else if (e.target.id === 'newcat') $('[data-act=cat-new]').click();
     else if (e.target.id === 'newhabit') $('[data-act=habit-add]').click();
   } else if (e.key === 'Escape') {
-    if ($('#modal').classList.contains('open')) closeModal(); else if (ui.prioFor) { ui.prioFor = null; renderPrio(); } else if (ui.timeOpen) { ui.timeOpen = false; renderSound(); } else if (ui.sndOpen) { closeSound(); } else if (ui.draft) { closeTask(); } else if (ui.drawer) { ui.drawer = false; renderDrawer(); } else if (ui.page) { ui.page = ui.page === 'habitlist' ? 'habits' : ui.page === 'habitnew' ? 'habitlist' : null; render(); }
+    if ($('#modal').classList.contains('open')) closeModal(); else if (ui.prioFor) { ui.prioFor = null; renderPrio(); } else if (ui.timeOpen) { ui.timeOpen = false; renderTimeSheet(); } else if (ui.draft) { closeTask(); } else if (ui.drawer) { ui.drawer = false; renderDrawer(); } else if (ui.page) { ui.page = ui.page === 'habitlist' ? 'habits' : ui.page === 'habitnew' ? 'habitlist' : null; render(); }
   }
 });
 $('#attachfile').addEventListener('change', e => {
