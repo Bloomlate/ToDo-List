@@ -58,7 +58,7 @@ input,select,textarea{font:inherit;color:inherit}
 .medalbtn:active{background:var(--chip)}
 .done .medal{filter:grayscale(1);opacity:.5}
 .grip{flex:none;display:grid;place-items:center;width:28px;height:30px;color:var(--sub);opacity:.55;touch-action:none;cursor:grab;margin-right:-6px}
-.row.lift,.subedit.lift{position:relative;z-index:5;box-shadow:0 8px 22px rgba(0,0,0,.22);background:var(--card);border-radius:14px;transition:none}
+.row.lift,.subedit.lift,.catrow.lift{position:relative;z-index:5;box-shadow:0 8px 22px rgba(0,0,0,.22);background:var(--card);border-radius:14px;transition:none}
 .glist{position:relative}
 .subedit .grip{flex:none;margin:0 -2px 0 -6px;width:26px}
 .ppop{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;background:var(--card);border-radius:22px;padding:18px 18px 14px;box-shadow:0 10px 40px rgba(0,0,0,.3);width:min(320px,88%)}
@@ -744,7 +744,7 @@ function pageBody() {
   }
   if (p === 'starred') { const l = S.tasks.filter(t => t.star).sort((a, b) => (a.done - b.done) || sortFn(a, b)); return l.length ? l.map(t => rowHtml(t)).join('') : `<div class="empty">${emptyArt}<div>별표 작업이 없습니다.<br>작업을 왼쪽으로 밀어 별을 눌러 보세요.</div></div>`; }
   if (p === 'cats') return `<div class="addrow"><input class="field" id="newcat" placeholder="새 카테고리 이름" maxlength="20"><button class="btn pri" style="flex:none;padding:0 20px" data-act="cat-new">추가</button></div>
-    <div class="card" style="padding:6px 18px">${S.cats.length ? S.cats.map((c, i) => `<div class="catrow"><button class="iconbtn" data-act="cat-up" data-v="${esc(c)}" aria-label="위로" ${i ? '' : 'disabled style="opacity:.25"'}>${ic('chevU', 20)}</button><button class="iconbtn" data-act="cat-dn" data-v="${esc(c)}" aria-label="아래로" ${i < S.cats.length - 1 ? '' : 'disabled style="opacity:.25"'}>${ic('chevD', 20)}</button><span class="nm">${esc(c)} <small style="color:var(--sub)">(${S.tasks.filter(t => t.cat === c).length})</small></span><button class="iconbtn" data-act="cat-rename" data-v="${esc(c)}" aria-label="이름 변경">${ic('edit', 20)}</button><button class="iconbtn" data-act="cat-del" data-v="${esc(c)}">${ic('trash', 20)}</button></div>`).join('') : '<div class="kv" style="padding:14px 0">카테고리가 없습니다.</div>'}</div>`;
+    <div class="card" style="padding:6px 18px">${S.cats.length ? `<div class="glist" data-drow="cat">${S.cats.map((c, i) => `<div class="catrow" data-i="${i}"><span class="grip" data-act="noop" aria-label="순서 변경">${ic('grab', 22)}</span><span class="nm">${esc(c)} <small style="color:var(--sub)">(${S.tasks.filter(t => t.cat === c).length})</small></span><button class="iconbtn" data-act="cat-rename" data-v="${esc(c)}" aria-label="이름 변경">${ic('edit', 20)}</button><button class="iconbtn" data-act="cat-del" data-v="${esc(c)}">${ic('trash', 20)}</button></div>`).join('')}</div>` : '<div class="kv" style="padding:14px 0">카테고리가 없습니다.</div>'}</div>`;
   if (p === 'habitlist') return HCATS.map(([c, l], ci) => `<div class="hsec">${c}</div>${l.map((x, ii) => `<button class="hitem" data-act="habit-pick" data-v="${ci}.${ii}"><span class="em">${x[0]}</span><span class="tt">${x[1]}</span>${x[2] ? '<span>🔥</span>' : ''}${x[3] ? '<span class="hbadge">NEW</span>' : ''}<span style="color:var(--sub)">›</span></button>`).join('')}`).join('') + `<button class="hlink" data-act="habit-req"><u>여기를 눌러</u> 원하는 습관을 알려주세요.</button>`;
   if (p === 'habitnew') {
     const d = ui.hd, x = HCATS[d.ci][1][d.ii];
@@ -1210,7 +1210,6 @@ document.addEventListener('click', e => {
     case 'reset': modal('모든 데이터 삭제', '작업, 습관, 집중 기록이 모두 지워지고 되돌릴 수 없어요. 계속할까요?', () => { localStorage.removeItem(KEY); S = defaults(); ui.page = null; render(); toast('초기화했어요'); }, '삭제'); break;
     /* 카테고리 관리 */
     case 'cat-new': { const i = $('#newcat'), n = i.value.trim(); if (n && !S.cats.includes(n)) { S.cats.push(n); save(); render(); } else if (n) toast('이미 있는 카테고리예요'); break; }
-    case 'cat-up': case 'cat-dn': { const i = S.cats.indexOf(v), j = i + (act === 'cat-up' ? -1 : 1); if (i < 0 || j < 0 || j >= S.cats.length) break; [S.cats[i], S.cats[j]] = [S.cats[j], S.cats[i]]; save(); render(); break; }
     case 'cat-rename': renameCat(v); break;
     case 'cat-del': modal('카테고리 삭제', `'${esc(v)}' 카테고리를 삭제할까요?<br>이 카테고리의 작업 ${S.tasks.filter(t => t.cat === v).length}개는 삭제되지 않고 '카테고리 없음'(모두 탭에서 확인)으로 옮겨져요.`, () => { S.cats = S.cats.filter(c => c !== v); S.tasks.forEach(t => { if (t.cat === v) t.cat = ''; }); if (ui.cat === v) ui.cat = '모두'; save(); render(); }, '삭제'); break;
     /* 습관 */
@@ -1313,7 +1312,7 @@ $('#importfile').addEventListener('change', e => {
   let d = null;
   document.addEventListener('pointerdown', e => {
     const g = e.target.closest('.grip'); if (!g) return;
-    const row = g.closest('.row, .subedit'), list = row && row.parentNode;
+    const row = g.closest('.row, .subedit, .catrow'), list = row && row.parentNode;
     if (!row || !list || !list.dataset.drow) return;
     d = { row, list, y: e.clientY, kind: list.dataset.drow, moved: false };
     row.classList.add('lift'); try { g.setPointerCapture(e.pointerId); } catch (x) {}
@@ -1344,6 +1343,8 @@ $('#importfile').addEventListener('change', e => {
       ids.forEach((id, i) => { const t = byId(id); if (t) t.order = base + i; });
       if (S.sort !== 'manual') { S.sort = 'manual'; toast('직접 정렬로 바꿨어요'); }
       save(); renderMain(); renderPage();
+    } else if (kind === 'cat') {
+      S.cats = [...list.children].map(n => S.cats[+n.dataset.i]); save(); render();
     } else if (ui.draft) {
       const order = [...list.children].map(n => +n.dataset.i);
       ui.draft.subs = order.map(i => ui.draft.subs[i]); renderSheet();
