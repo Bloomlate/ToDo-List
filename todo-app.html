@@ -37,7 +37,7 @@ input,select,textarea{font:inherit;color:inherit}
 .iconbtn:active{background:var(--chip)}
 .searchbar{margin:0 16px 6px;display:flex;align-items:center;gap:8px;background:var(--card);border-radius:14px;padding:0 12px;border:1px solid var(--line)}
 .searchbar input{flex:1;border:0;background:none;height:42px;outline:0;color:var(--text)}
-#main{flex:1;overflow-y:auto;padding:0 16px 120px;position:relative}
+#main{flex:1;overflow-y:auto;padding:0 16px 168px;position:relative}
 .grp{display:flex;align-items:center;gap:6px;font-weight:700;font-size:15px;margin:16px 4px 10px;cursor:pointer;user-select:none}
 .grp .ic{color:var(--sub)}
 .lnk{display:block;margin:26px auto 0;text-align:center;color:var(--sub);text-decoration:underline;text-underline-offset:4px;font-size:15px}
@@ -68,7 +68,7 @@ input,select,textarea{font:inherit;color:inherit}
 .medalbtn{display:grid;place-items:center;width:34px;height:34px;border-radius:50%}
 .medalbtn:active{background:var(--chip)}
 .done .medal{filter:grayscale(1);opacity:.5}
-.grip{flex:none;display:grid;place-items:center;width:28px;height:30px;color:var(--sub);opacity:.55;touch-action:none;cursor:grab;margin-right:-6px}
+.grip{flex:none;display:grid;place-items:center;width:28px;height:30px;color:var(--sub);opacity:.3;touch-action:none;cursor:grab;margin-right:-6px}
 .row.lift,.subedit.lift,.catrow.lift{position:relative;z-index:5;box-shadow:0 8px 22px rgba(0,0,0,.22);background:var(--card);border-radius:14px;transition:none}
 .glist{position:relative}
 .subedit .grip{flex:none;margin:0 -2px 0 -6px;width:26px}
@@ -93,7 +93,7 @@ input,select,textarea{font:inherit;color:inherit}
 .star-on{color:#f5b301}
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--sub);line-height:1.6;padding:60px 20px;gap:18px}
 .empty.small{padding:30px 20px}
-#fab{position:absolute;right:24px;bottom:84px;width:62px;height:62px;border-radius:50%;background:#0062cc;color:#fff;display:grid;place-items:center;box-shadow:0 0 0 10px color-mix(in srgb,#0062cc 18%,transparent),0 6px 14px rgba(0,0,0,.2);z-index:5}
+#fab{position:absolute;right:24px;bottom:84px;width:54px;height:54px;border-radius:50%;background:#0062cc;color:#fff;display:grid;place-items:center;box-shadow:0 0 0 9px color-mix(in srgb,#0062cc 18%,transparent),0 6px 14px rgba(0,0,0,.2);z-index:5}
 #fab:active{transform:scale(.95)}
 #nav{flex:none;height:66px;background:var(--nav);border-top:1px solid var(--line);display:flex;position:relative;z-index:6}
 #nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12.5px;color:var(--sub)}
@@ -345,6 +345,12 @@ input,select,textarea{font:inherit;color:inherit}
 .strow.done .bd b{text-decoration:line-through;color:var(--sub)}
 .strow .ssub{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:14px;text-align:left}.strow .ssub .chk{width:18px;height:18px;border-width:1.5px;margin:0}
 .strow.lift{position:relative;z-index:5;box-shadow:0 8px 22px rgba(0,0,0,.22);transition:none}
+.cdot{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--card);box-shadow:0 0 0 1px var(--line)}
+.cpal{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;justify-items:center}
+.cpal button{width:38px;height:38px;border-radius:50%;border:3px solid transparent;background-clip:padding-box;box-shadow:inset 0 0 0 2px var(--card)}
+.cpal button.on{border-color:var(--text,currentColor)}
+.chip .cd,.m .cd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.m .cd{margin-right:3px}
 .catrow:last-child{border:0}.catrow .nm{flex:1}
 .addrow{display:flex;gap:8px;margin-bottom:12px}.addrow input{flex:1}
 </style>
@@ -384,6 +390,7 @@ const MEDAL = { 1: ['#e53935', '#f6b73c', '#b57a00'], 2: ['#3f7fe0', '#aab4c0', 
 const medal = (r, s = 30) => { const [rb, c, d] = MEDAL[r]; return `<svg class="medal" width="${s}" height="${s}" viewBox="0 0 32 32"><path d="M8 1h7l4 11h-7z" fill="${rb}"/><path d="M24 1h-7l-4 11h7z" fill="${rb}" opacity=".85"/><circle cx="16" cy="21" r="9.5" fill="${c}" stroke="${d}" stroke-width="1.2"/><text x="16" y="25" text-anchor="middle" font-size="11.5" font-weight="800" fill="#fff" stroke="${d}" stroke-width=".4">${r}</text></svg>`; };
 const SORTS = { manual: '직접 정렬', date: '날짜순', prio: '우선순위순', created: '생성순' };
 const CATCOL = ['#0a8cff', '#7c6cf0', '#f06292', '#ffb300', '#26a69a', '#ef6c00', '#8d6e63', '#78909c'];
+const CATPAL = [...CATCOL, '#e53935', '#43a047'];
 const ACCENTS = [['파랑', '#0a8cff'], ['하늘', '#2bb3e6'], ['남색', '#3f5bd8'], ['청록', '#12a3a0']];
 
 /* ---------- 아이콘 ---------- */
@@ -432,7 +439,7 @@ const navIc = {
 
 /* ---------- 상태 / 저장 ---------- */
 const KEY = 'todo-app-v1';
-const defaults = () => ({ tasks: [], cats: ['작업', '개인', '위시리스트', '생일'], habits: [], store: [], focus: [], theme: 'light', accent: '#0a8cff', bg: { t: 'color' }, customBg: '', openSubs: false, sort: 'manual', seenDot: false, sound: 'none', autoSound: false, ver: 2 });
+const defaults = () => ({ tasks: [], cats: ['작업', '개인', '위시리스트', '생일'], catCol: { '작업': '#0a8cff', '개인': '#7c6cf0', '위시리스트': '#f06292', '생일': '#ffb300' }, habits: [], store: [], focus: [], theme: 'light', accent: '#0a8cff', bg: { t: 'color' }, customBg: '', openSubs: false, sort: 'manual', seenDot: false, sound: 'none', autoSound: false, ver: 2 });
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
@@ -443,12 +450,16 @@ function load() {
         r.tasks.forEach(t => { t.prio = { 2: 2, 3: 1 }[t.prio] || 3; });
         r.sort = 'manual'; r.ver = 2;
       }
+      r.cats.forEach((c, i) => { if (!r.catCol || typeof r.catCol !== 'object') r.catCol = {}; if (!r.catCol[c]) r.catCol[c] = CATCOL[i % CATCOL.length]; }); /* 기존 카테고리는 현재 색 유지 */
       return r;
     }
   } catch (e) {}
   return defaults();
 }
 let S = load();
+const catColor = c => (S.catCol && S.catCol[c]) || CATCOL[Math.max(0, S.cats.indexOf(c)) % CATCOL.length];
+const newCatColor = () => CATPAL.find(c => !S.cats.some(n => (S.catCol || {})[n] === c)) || CATPAL[S.cats.length % CATPAL.length];
+function addCat(n) { if (!S.catCol) S.catCol = {}; S.catCol[n] = newCatColor(); S.cats.push(n); }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); if (typeof gcSoon === 'function') gcSoon(); } catch (e) { toast('저장 공간이 부족해요. 첨부 파일을 줄여 보세요'); } }
 
 const ui = {
@@ -594,7 +605,7 @@ function renderTop() {
   let h = '';
   if (ui.tab === 'tasks') {
     h = `<div class="iconbtn" style="display:none"></div><div class="chips ${S.catWrap ? 'wrap' : ''}">
-      ${['모두', ...S.cats].map(c => `<button class="chip ${ui.cat === c ? 'sel' : ''}" data-act="cat" data-v="${esc(c)}">${esc(c)}</button>`).join('')}
+      ${['모두', ...S.cats].map(c => `<button class="chip ${ui.cat === c ? 'sel' : ''}" data-act="cat" data-v="${esc(c)}">${c === '모두' ? '' : `<i class="cd" style="background:${catColor(c)}"></i>`}${esc(c)}</button>`).join('')}
       <button class="chip add" data-act="cat-add" aria-label="카테고리 추가">${ic('plus', 18)}</button></div>
       <button class="iconbtn" data-act="menu-toggle" aria-label="메뉴">${ic('dots')}</button>`;
   } else if (ui.tab === 'store') {
@@ -618,7 +629,7 @@ function renderTop() {
 function renderNav() {
   const items = [['menu', '', ic('menu', 28), 'drawer-open'], ['tasks', 'ToDo', navIc.tasks, 'tab'], ['store', '창고', navIc.store, 'tab'], ['cal', '캘린더', navIc.cal, 'tab'], ['me', '내 것', navIc.me, 'tab']];
   $('#nav').innerHTML = items.map(([k, l, svg, act]) => `<button class="${act === 'tab' && ui.tab === (['cal', 'me', 'store'].includes(k) ? k : 'tasks') ? 'on' : ''}" data-act="${act}" data-v="${k}"><span class="${k === 'menu' && !S.seenDot ? 'dot' : ''}">${svg}</span>${l}</button>`).join('');
-  $('#fab').innerHTML = ic('plus', 30);
+  $('#fab').innerHTML = ic('plus', 27);
   $('#fab').style.display = ui.tab === 'me' || ui.page ? 'none' : 'grid';
 }
 
@@ -628,7 +639,7 @@ function rowHtml(t, grip) {
   const td = today();
   if (t.date && t.date !== td) meta.push(`<span class="m ${t.date < td && !t.done ? 'late' : ''}">${ic('cal', 13)}${t.date.slice(5).replace('-', '/')}</span>`);
   if (t.time) meta.push(`<span class="m">${t.time}</span>`);
-  if (t.cat) meta.push(`<span class="m">${esc(t.cat)}</span>`);
+  if (t.cat) meta.push(`<span class="m" style="color:${catColor(t.cat)}">${S.cats.includes(t.cat) ? '<i class="cd" style="background:' + catColor(t.cat) + '"></i>' : ''}${esc(t.cat)}</span>`);
   if (t.repeat && t.repeat !== 'none') meta.push(`<span class="m">${ic('repeat', 13)}${{ daily: '매일', weekly: '매주', monthly: '매월' }[t.repeat]}</span>`);
   if (t.wait) { meta.push(`<span class="m wt">${ic('hourglass', 13)}${esc(t.wait.who)}</span>`); if (t.wait.chk) meta.push(`<span class="m wt">${ic('cal', 13)}확인 ${t.wait.chk.slice(5).replace('-', '/')}</span>`); }
   if (t.back && !t.done) meta.push(`<span class="m back">회신 확인${t.back.who ? ' · ' + esc(t.back.who) : ''}</span>`);
@@ -755,7 +766,7 @@ function viewMe() {
   /* 완료/대기 도넛 */
   const range = ui.doneRange, since = Date.now() - range * 864e5;
   const src = ui.doneMode === 'done' ? done.filter(t => t.doneAt >= since) : pend;
-  const cats = [...S.cats, ''].map((c, i) => ({ name: c || '기타', c: CATCOL[i % CATCOL.length], n: src.filter(t => (t.cat || '') === c).length }));
+  const cats = [...S.cats, ''].map((c, i) => ({ name: c || '기타', c: c ? catColor(c) : CATCOL[i % CATCOL.length], n: src.filter(t => (t.cat || '') === c).length }));
   /* 일별 완료 */
   const ws = weekStart(ui.barWeek), wd = [...Array(7)].map((_, i) => { const d = new Date(ws); d.setDate(d.getDate() + i); return ymd(d); });
   const dv = wd.map(k => by[k] || 0), wtasks = S.tasks.filter(t => t.date && wd.includes(t.date));
@@ -815,7 +826,7 @@ function pageBody() {
   }
   if (p === 'starred') { const l = S.tasks.filter(t => t.star).sort((a, b) => (a.done - b.done) || sortFn(a, b)); return l.length ? l.map(t => rowHtml(t)).join('') : `<div class="empty">${emptyArt}<div>별표 작업이 없습니다.<br>작업을 왼쪽으로 밀어 별을 눌러 보세요.</div></div>`; }
   if (p === 'cats') return `<div class="addrow"><input class="field" id="newcat" placeholder="새 카테고리 이름" maxlength="20"><button class="btn pri" style="flex:none;padding:0 20px" data-act="cat-new">추가</button></div>
-    <div class="card" style="padding:6px 18px">${S.cats.length ? `<div class="glist" data-drow="cat">${S.cats.map((c, i) => `<div class="catrow" data-i="${i}"><span class="grip" data-act="noop" aria-label="순서 변경">${ic('grab', 22)}</span><span class="nm">${esc(c)} <small style="color:var(--sub)">(${S.tasks.filter(t => t.cat === c).length})</small></span><button class="iconbtn" data-act="cat-rename" data-v="${esc(c)}" aria-label="이름 변경">${ic('edit', 20)}</button><button class="iconbtn" data-act="cat-del" data-v="${esc(c)}">${ic('trash', 20)}</button></div>`).join('')}</div>` : '<div class="kv" style="padding:14px 0">카테고리가 없습니다.</div>'}</div>`;
+    <div class="card" style="padding:6px 18px">${S.cats.length ? `<div class="glist" data-drow="cat">${S.cats.map((c, i) => `<div class="catrow" data-i="${i}"><span class="grip" data-act="noop" aria-label="순서 변경">${ic('grab', 22)}</span><button class="cdot" style="background:${catColor(c)}" data-act="cat-color" data-v="${esc(c)}" aria-label="색 선택"></button><span class="nm">${esc(c)} <small style="color:var(--sub)">(${S.tasks.filter(t => t.cat === c).length})</small></span><button class="iconbtn" data-act="cat-rename" data-v="${esc(c)}" aria-label="이름 변경">${ic('edit', 20)}</button><button class="iconbtn" data-act="cat-del" data-v="${esc(c)}">${ic('trash', 20)}</button></div>`).join('')}</div>` : '<div class="kv" style="padding:14px 0">카테고리가 없습니다.</div>'}</div>`;
   if (p === 'habitlist') return HCATS.map(([c, l], ci) => `<div class="hsec">${c}</div>${l.map((x, ii) => `<button class="hitem" data-act="habit-pick" data-v="${ci}.${ii}"><span class="em">${x[0]}</span><span class="tt">${x[1]}</span>${x[2] ? '<span>🔥</span>' : ''}${x[3] ? '<span class="hbadge">NEW</span>' : ''}<span style="color:var(--sub)">›</span></button>`).join('')}`).join('') + `<button class="hlink" data-act="habit-req"><u>여기를 눌러</u> 원하는 습관을 알려주세요.</button>`;
   if (p === 'habitnew') {
     const d = ui.hd, x = HCATS[d.ci][1][d.ii];
@@ -1345,7 +1356,7 @@ let moved = false;
 function renameCat(v) {
   askText('카테고리 이름 변경', v, n => {
     if (n !== v && S.cats.includes(n)) { toast('이미 있는 카테고리예요'); return false; }
-    S.cats[S.cats.indexOf(v)] = n; S.tasks.forEach(t => { if (t.cat === v) t.cat = n; }); if (ui.cat === v) ui.cat = n; save(); render();
+    S.catCol[n] = catColor(v); delete S.catCol[v]; S.cats[S.cats.indexOf(v)] = n; S.tasks.forEach(t => { if (t.cat === v) t.cat = n; }); if (ui.cat === v) ui.cat = n; save(); render();
   });
 }
 /* 칩을 길게 누르거나 더블클릭/우클릭하면 이름 변경 */
@@ -1372,7 +1383,7 @@ document.addEventListener('click', e => {
     case 'nav-page': ui.page = v; ui.drawer = false; ui.menu = false; render(); break;
     case 'page-back': ui.page = ui.page === 'focuslog' ? 'focus' : ui.page === 'habitlist' ? 'habits' : ui.page === 'habitnew' ? 'habitlist' : null; render(); break;
     case 'cat': ui.cat = v; render(); break;
-    case 'cat-add': askText('새 카테고리', '', n => { if (!S.cats.includes(n)) { S.cats.push(n); ui.cat = n; save(); render(); } else toast('이미 있는 카테고리예요'); }); break;
+    case 'cat-add': askText('새 카테고리', '', n => { if (!S.cats.includes(n)) { addCat(n); ui.cat = n; save(); render(); } else toast('이미 있는 카테고리예요'); }); break;
     case 'menu-toggle': ui.menu = !ui.menu; renderTop(); break;
     case 'menu-close': ui.menu = false; renderTop(); break;
     case 'menu-search': ui.menu = false; ui.searchOpen = true; renderTop(); setTimeout(() => { const i = $('#searchin'); i && i.focus(); }, 20); break;
@@ -1460,14 +1471,17 @@ document.addEventListener('click', e => {
     case 'import': $('#importfile').click(); break;
     case 'reset': modal('모든 데이터 삭제', '작업, 습관, 집중 기록이 모두 지워지고 되돌릴 수 없어요. 계속할까요?', () => { localStorage.removeItem(KEY); S = defaults(); ui.page = null; render(); toast('초기화했어요'); }, '삭제'); break;
     /* 카테고리 관리 */
-    case 'cat-new': { const i = $('#newcat'), n = i.value.trim(); if (n && !S.cats.includes(n)) { S.cats.push(n); save(); render(); } else if (n) toast('이미 있는 카테고리예요'); break; }
+    case 'cat-color': { const cur = catColor(v); ui.pickCol = cur;
+      modal('색 선택 · ' + v, `<div class="cpal">${CATPAL.map(c => `<button class="${c === cur ? 'on' : ''}" style="background:${c}" data-act="cat-col-pick" data-v="${c}" aria-label="${c}"></button>`).join('')}</div>`, () => { S.catCol[v] = ui.pickCol; save(); render(); }); break; }
+    case 'cat-col-pick': ui.pickCol = v; document.querySelectorAll('.cpal button').forEach(x => x.classList.toggle('on', x.dataset.v === v)); break;
+    case 'cat-new': { const i = $('#newcat'), n = i.value.trim(); if (n && !S.cats.includes(n)) { addCat(n); save(); render(); } else if (n) toast('이미 있는 카테고리예요'); break; }
     case 'g-saveid': { const c = gcfg(), n = ($('#gid').value || '').trim(); if (n !== c.id) { c.id = n; if (c.on) { c.on = false; GC.tok = null; } save(); } toast(n ? '클라이언트 ID를 저장했어요' : '클라이언트 ID를 지웠어요'); if (n) gcLoad().catch(() => {}); renderPage(); break; }
     case 'g-connect': gcConnect(); break;
     case 'g-disconnect': gcDisconnect(); break;
     case 'g-sync': if (!gcOk()) gcConnect(); else gcSync(true); break;
     case 'cat-wrap': S.catWrap = !S.catWrap; save(); render(); break;
     case 'cat-rename': renameCat(v); break;
-    case 'cat-del': { const n = S.tasks.filter(t => t.cat === v).length; modal('카테고리 삭제', `'${esc(v)}' 카테고리를 삭제할까요?<br><b style="color:var(--danger)">이 카테고리 안의 할 일 ${n}개가 모두 삭제되고 되돌릴 수 없어요.</b>`, () => { S.cats = S.cats.filter(c => c !== v); S.tasks = S.tasks.filter(t => t.cat !== v); if (ui.cat === v) ui.cat = '모두'; save(); render(); }, '삭제'); break; }
+    case 'cat-del': { const n = S.tasks.filter(t => t.cat === v).length; modal('카테고리 삭제', `'${esc(v)}' 카테고리를 삭제할까요?<br><b style="color:var(--danger)">이 카테고리 안의 할 일 ${n}개가 모두 삭제되고 되돌릴 수 없어요.</b>`, () => { S.cats = S.cats.filter(c => c !== v); delete S.catCol[v]; S.tasks = S.tasks.filter(t => t.cat !== v); if (ui.cat === v) ui.cat = '모두'; save(); render(); }, '삭제'); break; }
     /* 습관 */
     case 'habit-new': ui.page = 'habitlist'; renderPage(); break;
     case 'habit-pick': { const [ci, ii] = v.split('.').map(Number), x = HCATS[ci][1][ii]; ui.hd = { ci, ii, cat: HCATS[ci][0], msg: x[1], days: [1, 2, 3, 4, 5], times: ['08:00'] }; ui.page = 'habitnew'; renderPage(); break; }
