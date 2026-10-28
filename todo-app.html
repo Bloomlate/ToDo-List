@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>To-Do List</title>
 <style>
@@ -20,6 +21,8 @@ input,select,textarea{font:inherit;color:inherit}
 #topbar{flex:none;min-height:56px;padding:10px 12px 4px;display:flex;align-items:center;gap:8px}
 .chips{display:flex;gap:10px;overflow-x:auto;flex:1;scrollbar-width:none;padding:2px 0}
 .chips::-webkit-scrollbar{display:none}
+.chips.wrap{flex-wrap:wrap;overflow-x:visible;gap:8px}
+#topbar:has(.chips.wrap){align-items:flex-start}#topbar:has(.chips.wrap) .chips{min-width:0}
 .chip{flex:none;padding:8px 18px;border-radius:20px;background:var(--chip);color:var(--sub);font-size:15px}
 .chip.sel{background:var(--chipsel);color:var(--primary);font-weight:700}
 .chip.add{padding:8px 12px}
@@ -557,7 +560,7 @@ function delTask(id) { S.tasks = S.tasks.filter(t => t.id !== id); ui.openRow = 
 function renderTop() {
   let h = '';
   if (ui.tab === 'tasks') {
-    h = `<div class="iconbtn" style="display:none"></div><div class="chips">
+    h = `<div class="iconbtn" style="display:none"></div><div class="chips ${S.catWrap ? 'wrap' : ''}">
       ${['모두', ...S.cats].map(c => `<button class="chip ${ui.cat === c ? 'sel' : ''}" data-act="cat" data-v="${esc(c)}">${esc(c)}</button>`).join('')}
       <button class="chip add" data-act="cat-add" aria-label="카테고리 추가">${ic('plus', 18)}</button></div>
       <button class="iconbtn" data-act="menu-toggle" aria-label="메뉴">${ic('dots')}</button>`;
@@ -773,6 +776,7 @@ function pageBody() {
   }
   if (p === 'settings') return `<div class="card" style="padding:4px 18px">
     <div class="setrow"><div>하위 작업 항상 펼치기<small>끄면 숫자 배지를 눌러 펼쳐요</small></div><button data-act="menu-subs" data-keep="1"><i class="switch ${S.openSubs ? 'on' : ''}" style="display:block"></i></button></div>
+    <div class="setrow"><div>카테고리 줄바꿈 표시<small>끄면 옆으로 밀어서 보고, 켜면 여러 줄로 모두 보여요</small></div><button data-act="cat-wrap"><i class="switch ${S.catWrap ? 'on' : ''}" style="display:block"></i></button></div>
     <div class="setrow"><div>알림 권한<small>${'Notification' in window ? { granted: '허용됨', denied: '차단됨 (브라우저 설정에서 변경)', default: '아직 요청하지 않음' }[Notification.permission] : '이 브라우저는 지원하지 않아요'}</small></div><button class="qbtn" data-act="notif">요청</button></div>
     <div class="setrow"><div>작업 정렬<small>${SORTS[S.sort]}</small></div><button class="qbtn" data-act="menu-sort" data-keep="1">변경</button></div></div>
     <div class="card" style="padding:4px 18px"><div class="setrow"><div>데이터 내보내기<small>JSON 파일로 백업</small></div><button class="qbtn" data-act="export">내보내기</button></div>
@@ -1210,8 +1214,9 @@ document.addEventListener('click', e => {
     case 'reset': modal('모든 데이터 삭제', '작업, 습관, 집중 기록이 모두 지워지고 되돌릴 수 없어요. 계속할까요?', () => { localStorage.removeItem(KEY); S = defaults(); ui.page = null; render(); toast('초기화했어요'); }, '삭제'); break;
     /* 카테고리 관리 */
     case 'cat-new': { const i = $('#newcat'), n = i.value.trim(); if (n && !S.cats.includes(n)) { S.cats.push(n); save(); render(); } else if (n) toast('이미 있는 카테고리예요'); break; }
+    case 'cat-wrap': S.catWrap = !S.catWrap; save(); render(); break;
     case 'cat-rename': renameCat(v); break;
-    case 'cat-del': modal('카테고리 삭제', `'${esc(v)}' 카테고리를 삭제할까요?<br>이 카테고리의 작업 ${S.tasks.filter(t => t.cat === v).length}개는 삭제되지 않고 '카테고리 없음'(모두 탭에서 확인)으로 옮겨져요.`, () => { S.cats = S.cats.filter(c => c !== v); S.tasks.forEach(t => { if (t.cat === v) t.cat = ''; }); if (ui.cat === v) ui.cat = '모두'; save(); render(); }, '삭제'); break;
+    case 'cat-del': { const n = S.tasks.filter(t => t.cat === v).length; modal('카테고리 삭제', `'${esc(v)}' 카테고리를 삭제할까요?<br><b style="color:var(--danger)">이 카테고리 안의 할 일 ${n}개가 모두 삭제되고 되돌릴 수 없어요.</b>`, () => { S.cats = S.cats.filter(c => c !== v); S.tasks = S.tasks.filter(t => t.cat !== v); if (ui.cat === v) ui.cat = '모두'; save(); render(); }, '삭제'); break; }
     /* 습관 */
     case 'habit-new': ui.page = 'habitlist'; renderPage(); break;
     case 'habit-pick': { const [ci, ii] = v.split('.').map(Number), x = HCATS[ci][1][ii]; ui.hd = { ci, ii, cat: HCATS[ci][0], msg: x[1], days: [1, 2, 3, 4, 5], times: ['08:00'] }; ui.page = 'habitnew'; renderPage(); break; }
