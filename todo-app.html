@@ -158,6 +158,10 @@ input,select,textarea{font:inherit;color:inherit}
 .day.sel:not(.today) span.n{box-shadow:inset 0 0 0 2px var(--primary)}
 .day .dots{position:absolute;bottom:1px;display:flex;gap:2px}.day .dots i{width:4px;height:4px;border-radius:50%;background:var(--primary)}
 .day.today .dots i{background:var(--primary)}
+.day .dots i.g{background:#1e9e5a}
+.gev{display:flex;align-items:center;gap:12px;margin:8px 0;padding:12px 14px;border-radius:16px;border:1.5px dashed color-mix(in srgb,#1e9e5a 55%,var(--line));background:color-mix(in srgb,#1e9e5a 8%,var(--card))}
+.gev b{font-weight:600;font-size:15px}.gev small{display:block;color:var(--sub);margin-top:2px}
+.gtag{flex:none;width:26px;height:26px;border-radius:8px;background:#1e9e5a;color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center}
 .calmonth{display:flex;align-items:center;gap:6px;flex:1;font-size:19px}
 .sheetwrap{position:absolute;inset:0;z-index:60;display:flex;align-items:flex-end}
 .sheetwrap .scrim{z-index:0}
@@ -169,7 +173,7 @@ input,select,textarea{font:inherit;color:inherit}
 .field{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--text);min-width:0}
 .pbtn{width:44px;height:40px;border-radius:12px;background:var(--bg);display:grid;place-items:center;border:2px solid transparent}
 .pbtn.sel{border-color:var(--primary);background:var(--soft)}
-.qbtn{padding:8px 12px;border-radius:12px;background:var(--bg);font-size:14px;color:var(--sub)}
+.qbtn{white-space:nowrap;padding:8px 12px;border-radius:12px;background:var(--bg);font-size:14px;color:var(--sub)}
 .qbtn.sel{background:var(--chipsel);color:var(--primary);font-weight:600}
 .btns{display:flex;gap:10px;margin-top:22px}
 .btn{flex:1;height:48px;border-radius:24px;background:var(--chip);font-weight:600}
@@ -437,7 +441,7 @@ function load() {
   return defaults();
 }
 let S = load();
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('저장 공간이 부족해요. 첨부 파일을 줄여 보세요'); } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); if (typeof gcSoon === 'function') gcSoon(); } catch (e) { toast('저장 공간이 부족해요. 첨부 파일을 줄여 보세요'); } }
 
 const ui = {
   tab: 'tasks', cat: '모두', page: null, selDate: today(), cal: { y: new Date().getFullYear(), m: new Date().getMonth() },
@@ -679,17 +683,20 @@ function viewCal() {
   const first = new Date(y, m, 1), start = first.getDay();
   const rows = Math.ceil((start + new Date(y, m + 1, 0).getDate()) / 7);
   const td = today();
-  const cnt = {}; S.tasks.forEach(t => { if (t.date && !t.done) cnt[t.date] = (cnt[t.date] || 0) + 1; });
+  const cnt = {}, gcnt = {}; S.tasks.forEach(t => { if (t.date && !t.done) cnt[t.date] = (cnt[t.date] || 0) + 1; });
+  const gev = (S.gcal && S.gcal.on && S.gcal.ev) || []; gev.forEach(e => e.d.forEach(d => gcnt[d] = 1));
   let cells = '';
   for (let i = 0; i < rows * 7; i++) {
     const d = new Date(y, m, 1 - start + i), k = ymd(d), c = Math.min(cnt[k] || 0, 3);
-    cells += `<button class="day ${d.getMonth() !== m ? 'out' : ''} ${k === td ? 'today' : ''} ${k === ui.selDate ? 'sel' : ''}" data-act="cal-day" data-v="${k}"><span class="n">${d.getDate()}</span>${c ? `<span class="dots">${'<i></i>'.repeat(c)}</span>` : ''}</button>`;
+    cells += `<button class="day ${d.getMonth() !== m ? 'out' : ''} ${k === td ? 'today' : ''} ${k === ui.selDate ? 'sel' : ''}" data-act="cal-day" data-v="${k}"><span class="n">${d.getDate()}</span>${c || gcnt[k] ? `<span class="dots">${'<i></i>'.repeat(c)}${gcnt[k] ? '<i class="g"></i>' : ''}</span>` : ''}</button>`;
   }
   const sd = parse(ui.selDate);
   const list = S.tasks.filter(t => t.date === ui.selDate).sort((a, b) => (a.done - b.done) || sortFn(a, b));
+  const gl = gev.filter(e => e.d.includes(ui.selDate)).sort((a, b) => (b.ad - a.ad) || a.tm.localeCompare(b.tm));
+  const ghtml = gl.map(e => `<div class="gev"><span class="gtag">G</span><div><b>${esc(e.t)}</b><small>${e.ad ? '종일' : e.tm} · 구글 캘린더</small></div></div>`).join('');
   return `<div class="calhead"><div class="wk">${DOW.map(d => `<div>${d}</div>`).join('')}</div><div class="cgrid">${cells}</div></div>
     <div class="grp" style="cursor:default">${sd.getMonth() + 1}월 ${sd.getDate()}일 ${DOW[sd.getDay()]}요일 (${list.length})</div>
-    ${list.length ? list.map(t => rowHtml(t)).join('') : `<div class="empty small">새 작업을 생성하려면 "+"를 클릭하세요.<br>달력 보기에서 하루를 명확하게 계획해보세요!</div>`}`;
+    ${list.map(t => rowHtml(t)).join('')}${ghtml}${list.length || gl.length ? '' : `<div class="empty small">새 작업을 생성하려면 "+"를 클릭하세요.<br>달력 보기에서 하루를 명확하게 계획해보세요!</div>`}`;
 }
 
 /* ---------- 렌더: 내 것 ---------- */
@@ -827,6 +834,7 @@ function pageBody() {
     <div class="card" style="padding:4px 18px"><div class="setrow"><div>데이터 내보내기<small>JSON 파일로 백업</small></div><button class="qbtn" data-act="export">내보내기</button></div>
     <div class="setrow"><div>데이터 가져오기<small>백업 파일 불러오기</small></div><button class="qbtn" data-act="import">가져오기</button></div>
     <div class="setrow"><div style="color:var(--danger)">모든 데이터 삭제<small>되돌릴 수 없어요</small></div><button class="qbtn" style="color:var(--danger)" data-act="reset">삭제</button></div></div>
+    ${gcSettingsHtml()}
     <div class="kv" style="text-align:center;margin-top:18px">데이터는 이 브라우저의 localStorage에만 저장돼요.</div>`;
   if (p === 'focus') {
     const t = byId(F.taskId), started = fStarted();
@@ -1146,6 +1154,146 @@ function checkReminders() {
   });
   if (ch) save();
 }
+/* ---------- 구글 캘린더 연동 (서버 없음: Google Identity Services 토큰 모델 + Calendar REST) ---------- */
+/* 클라이언트 ID(비밀 아님)는 설정 화면에서 붙여넣으면 이 브라우저에 저장돼요. 코드에 직접 넣으려면 아래 값을 채우세요. */
+const GOOGLE_CLIENT_ID = '';
+const GSCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const GAPI = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+const GC = { tok: null, exp: 0, busy: false, err: '', loading: null, timer: null, lastSig: '' };
+const gcfg = () => S.gcal || (S.gcal = { id: '', on: false, map: {}, last: 0, ev: [] });
+const gcid = () => (gcfg().id || GOOGLE_CLIENT_ID || '').trim();
+const gcOk = () => !!(GC.tok && Date.now() < GC.exp);
+function gcLoad() {
+  if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
+  if (!GC.loading) GC.loading = new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = () => res(); s.onerror = () => { GC.loading = null; rej(new Error('load')); };
+    document.head.appendChild(s);
+  });
+  return GC.loading;
+}
+function gcErrMsg(e) {
+  const c = e && (e.code || e.message || e.type || e.error) || '';
+  if (c === 'access_denied') return '권한이 거부되었어요. 연결 시 캘린더 권한을 허용해 주세요';
+  if (c === 'popup_closed' || c === 'popup_failed_to_open') return '로그인 창이 닫혔거나 열리지 않았어요. 팝업 차단을 확인해 주세요';
+  if (c === 'load') return '구글 로그인 스크립트를 불러오지 못했어요. 인터넷 연결을 확인해 주세요';
+  if (c === 'auth') return '인증이 만료되었어요. 다시 연결해 주세요';
+  if (c === 'forbidden') return '캘린더 접근 권한이 없거나 Calendar API가 꺼져 있어요 (HANDOFF.md 설정 참고)';
+  if (c === 'server') return '구글 서버 오류예요. 잠시 후 다시 시도해 주세요';
+  if (c === 'idpiframe_initialization_failed' || c === 'invalid_client' || c === 'unauthorized_client') return '클라이언트 ID 또는 승인된 JavaScript 출처 설정을 확인해 주세요';
+  return '구글 연결 오류: ' + (c || '알 수 없음');
+}
+/* 토큰 요청. silent=true면 로그인 창 없이 시도(실패하면 reject) */
+function gcAuth(silent) {
+  return gcLoad().then(() => new Promise((res, rej) => {
+    const cl = google.accounts.oauth2.initTokenClient({
+      client_id: gcid(), scope: GSCOPE,
+      callback: r => {
+        if (r.error) return rej({ code: r.error });
+        GC.tok = r.access_token; GC.exp = Date.now() + ((+r.expires_in || 3600) - 60) * 1000; GC.err = '';
+        const c = gcfg(); if (!c.on) { c.on = true; save(); }
+        res();
+      },
+      error_callback: e => rej({ code: e && e.type || 'popup_closed' })
+    });
+    cl.requestAccessToken({ prompt: silent ? 'none' : '' });
+  }));
+}
+async function gcFetch(url, opt = {}) {
+  const r = await fetch(url, { ...opt, headers: { Authorization: 'Bearer ' + GC.tok, 'Content-Type': 'application/json' } });
+  if (r.status === 401) { GC.tok = null; throw { code: 'auth' }; }
+  if (r.status === 403) throw { code: 'forbidden' };
+  if (r.status === 404 || r.status === 410) return { gone: true };
+  if (r.status >= 400) throw { code: r.status === 429 || r.status >= 500 ? 'server' : 'http ' + r.status };
+  return r.status === 204 ? {} : r.json();
+}
+const gcTz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { return 'Asia/Seoul'; } };
+function gcStr(d, t, addMin) { const x = parse(d), [h, m] = t.split(':').map(Number); x.setHours(h, m + addMin, 0, 0); return `${ymd(x)}T${pad(x.getHours())}:${pad(x.getMinutes())}:00`; }
+/* 앱 할 일 → 구글 일정 본문. 완료된 일은 일정을 지우지 않고 제목 앞에 ✅를 붙여 유지 */
+function gcBody(t) {
+  const desc = [t.memo, ...(t.subs || []).map(s => (s.done ? '☑ ' : '☐ ') + (s.t || s.title || s.text || ''))].filter(Boolean).join('\n');
+  const rem = remList(t).filter(o => o >= 0 && o <= 40320).slice(0, 5);
+  const b = { summary: (t.done ? '✅ ' : '') + t.title, description: desc,
+    reminders: rem.length ? { useDefault: false, overrides: rem.map(m => ({ method: 'popup', minutes: m })) } : { useDefault: true },
+    extendedProperties: { private: { todoAppId: t.id } } };
+  if (t.time) { const z = gcTz(); b.start = { dateTime: gcStr(t.date, t.time, 0), timeZone: z }; b.end = { dateTime: gcStr(t.date, t.time, 60), timeZone: z }; }
+  else { b.start = { date: t.date }; b.end = { date: addDays(t.date, 1) }; }
+  return b;
+}
+/* 구글 일정 → 앱 표시용(읽기 전용) */
+function gcNorm(e) {
+  if (!e || e.status === 'cancelled' || !e.start) return null;
+  const ep = e.extendedProperties && e.extendedProperties.private;
+  if (ep && ep.todoAppId) return null; /* 앱에서 내보낸 일정은 중복 표시 안 함 */
+  const o = { id: e.id, t: e.summary || '(제목 없음)', d: [], tm: '', ad: !!e.start.date };
+  if (e.start.date) { let d = e.start.date; const end = e.end && e.end.date || addDays(d, 1); for (let i = 0; d < end && i < 62; i++) { o.d.push(d); d = addDays(d, 1); } }
+  else { const s = new Date(e.start.dateTime); o.d.push(ymd(s)); o.tm = pad(s.getHours()) + ':' + pad(s.getMinutes()); }
+  return o.d.length ? o : null;
+}
+const gcSigOf = () => JSON.stringify(S.tasks.filter(t => t.date).map(t => [t.id, gcBody(t)]));
+async function gcSync(manual) {
+  const c = gcfg();
+  if (GC.busy || !c.on || !gcid()) return;
+  GC.busy = true; GC.err = ''; if (ui.page === 'settings') renderPage();
+  try {
+    if (!gcOk()) { try { await gcAuth(true); } catch (e) { throw { code: manual ? 'auth' : 'auth' }; } }
+    const sig = gcSigOf(), want = {};
+    S.tasks.forEach(t => { if (t.date) want[t.id] = t; }); /* 창고 항목(S.store)은 포함하지 않음 */
+    for (const id of Object.keys(want)) {
+      const t = want[id], body = gcBody(t), s = JSON.stringify(body), m = c.map[id];
+      if (m && m.sig === s) continue;
+      if (m) { const r = await gcFetch(`${GAPI}/${encodeURIComponent(m.eid)}`, { method: 'PUT', body: s }); if (!r.gone) { c.map[id] = { eid: m.eid, sig: s }; continue; } }
+      const r = await gcFetch(GAPI, { method: 'POST', body: s }); c.map[id] = { eid: r.id, sig: s };
+    }
+    for (const id of Object.keys(c.map)) {
+      if (want[id]) continue;
+      await gcFetch(`${GAPI}/${encodeURIComponent(c.map[id].eid)}`, { method: 'DELETE' }); delete c.map[id];
+    }
+    const now = new Date(), min = new Date(now.getFullYear(), now.getMonth() - 2, 1), max = new Date(now.getFullYear(), now.getMonth() + 7, 1);
+    const ev = []; let pt = '';
+    for (let n = 0; n < 6; n++) {
+      const q = `?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(min.toISOString())}&timeMax=${encodeURIComponent(max.toISOString())}` + (pt ? '&pageToken=' + encodeURIComponent(pt) : '');
+      const r = await gcFetch(GAPI + q); (r.items || []).forEach(e => { const o = gcNorm(e); if (o && !Object.values(c.map).some(m => m.eid === o.id)) ev.push(o); });
+      if (!(pt = r.nextPageToken)) break;
+    }
+    c.ev = ev; c.last = Date.now(); GC.lastSig = sig;
+    save(); if (manual) toast('구글 캘린더와 동기화했어요');
+  } catch (e) { GC.err = gcErrMsg(e); if (manual) toast(GC.err); save(); }
+  GC.busy = false; render();
+}
+/* 할 일이 바뀌면 잠시 뒤 자동 내보내기 (save()에서 호출) */
+function gcSoon() {
+  const c = S.gcal; if (!c || !c.on || GC.busy || !gcOk()) return;
+  clearTimeout(GC.timer); GC.timer = setTimeout(() => { if (gcSigOf() !== GC.lastSig) gcSync(false); }, 3000);
+}
+async function gcConnect() {
+  if (!gcid()) { toast('클라이언트 ID가 필요해요'); return; }
+  if (!(window.google && google.accounts)) { toast('구글 로그인 준비 중이에요. 잠시 후 다시 눌러 주세요'); gcLoad().then(() => renderPage(), e => { GC.err = gcErrMsg(e); renderPage(); }); return; }
+  try { await gcAuth(false); } catch (e) { GC.err = gcErrMsg(e); renderPage(); return; }
+  await gcSync(true);
+}
+function gcDisconnect() {
+  const c = gcfg();
+  try { if (GC.tok && window.google) google.accounts.oauth2.revoke(GC.tok, () => {}); } catch (e) {}
+  GC.tok = null; GC.exp = 0; GC.err = ''; c.on = false; c.ev = []; c.last = 0; save(); render(); toast('구글 캘린더 연결을 해제했어요');
+}
+function gcSettingsHtml() {
+  const c = gcfg(), id = gcid();
+  if (id) gcLoad().catch(() => {}); /* 연결 버튼을 누르기 전에 미리 불러둠 */
+  const st = !id ? '클라이언트 ID가 필요해요' : !c.on ? '연결 안 됨' : GC.busy ? '동기화 중…' : gcOk() ? '연결됨' : '다시 연결이 필요해요 (토큰은 약 1시간 뒤 만료)';
+  const last = c.last ? new Date(c.last) : null;
+  return `<div class="tsec" style="margin-top:18px">구글 캘린더 연결</div><div class="card" style="padding:4px 18px">
+    <div class="setrow" style="align-items:stretch;flex-direction:column;gap:8px"><div>OAuth 클라이언트 ID<small>구글 클라우드 콘솔에서 발급한 웹 클라이언트 ID를 붙여넣으세요 (비밀 정보 아님, 이 브라우저에만 저장)</small></div>
+      <div style="display:flex;gap:8px"><input id="gid" value="${esc(c.id)}" placeholder="xxxx.apps.googleusercontent.com" autocomplete="off" style="flex:1;min-width:0;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg)"><button class="qbtn" data-act="g-saveid">저장</button></div></div>
+    <div class="setrow"><div>상태<small id="gstat" style="${GC.err ? 'color:var(--danger)' : ''}">${esc(GC.err || st)}</small></div>
+      ${c.on ? `<span style="display:flex;gap:6px">${gcOk() ? '' : '<button class="qbtn sel" data-act="g-connect">재연결</button>'}<button class="qbtn" data-act="g-disconnect">해제</button></span>` : '<button class="qbtn sel" data-act="g-connect">연결</button>'}</div>
+    <div class="setrow"><div>동기화<small>마지막: ${last ? `${last.getMonth() + 1}/${last.getDate()} ${pad(last.getHours())}:${pad(last.getMinutes())}` : '아직 없음'} · 날짜 있는 할 일 ↔ 기본 캘린더</small></div><button class="qbtn" data-act="g-sync">지금 동기화</button></div></div>`;
+}
+/* 앱을 열 때 이전에 연결했다면 조용히 재연결 시도 */
+if (gcid()) {
+  gcLoad().then(() => { if (gcfg().on) return gcAuth(true).then(() => gcSync(false)); }).catch(e => { if (gcfg().on) { GC.err = ''; } }).finally(() => { if (ui.page === 'settings') renderPage(); });
+}
+
 setInterval(checkReminders, 15000);
 
 /* ---------- 이벤트 ---------- */
@@ -1263,6 +1411,10 @@ document.addEventListener('click', e => {
     case 'reset': modal('모든 데이터 삭제', '작업, 습관, 집중 기록이 모두 지워지고 되돌릴 수 없어요. 계속할까요?', () => { localStorage.removeItem(KEY); S = defaults(); ui.page = null; render(); toast('초기화했어요'); }, '삭제'); break;
     /* 카테고리 관리 */
     case 'cat-new': { const i = $('#newcat'), n = i.value.trim(); if (n && !S.cats.includes(n)) { S.cats.push(n); save(); render(); } else if (n) toast('이미 있는 카테고리예요'); break; }
+    case 'g-saveid': { const c = gcfg(), n = ($('#gid').value || '').trim(); if (n !== c.id) { c.id = n; if (c.on) { c.on = false; GC.tok = null; } save(); } toast(n ? '클라이언트 ID를 저장했어요' : '클라이언트 ID를 지웠어요'); if (n) gcLoad().catch(() => {}); renderPage(); break; }
+    case 'g-connect': gcConnect(); break;
+    case 'g-disconnect': gcDisconnect(); break;
+    case 'g-sync': if (!gcOk()) gcConnect(); else gcSync(true); break;
     case 'cat-wrap': S.catWrap = !S.catWrap; save(); render(); break;
     case 'cat-rename': renameCat(v); break;
     case 'cat-del': { const n = S.tasks.filter(t => t.cat === v).length; modal('카테고리 삭제', `'${esc(v)}' 카테고리를 삭제할까요?<br><b style="color:var(--danger)">이 카테고리 안의 할 일 ${n}개가 모두 삭제되고 되돌릴 수 없어요.</b>`, () => { S.cats = S.cats.filter(c => c !== v); S.tasks = S.tasks.filter(t => t.cat !== v); if (ui.cat === v) ui.cat = '모두'; save(); render(); }, '삭제'); break; }
