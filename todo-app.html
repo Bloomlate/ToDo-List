@@ -57,6 +57,7 @@ input,select,textarea{font:inherit;color:inherit}
 .row .actions{position:absolute;right:0;top:0;bottom:0;width:244px;display:flex;visibility:hidden}
 .row.swiped .actions{visibility:visible}
 .row .actions button{width:61px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:#fff}
+.row.waiting .fg{opacity:.62}.row.waiting .t{color:var(--sub)}.meta .m.wt{color:var(--sub)}.meta .m.back{color:#e8557a;font-weight:700}.a-resume{background:#7a8a99}.a-done{background:#2e9d6b}
 .a-star{background:#bcdcf7;color:#5b7287!important}.a-date{background:#5fb4ff}.a-focus{background:var(--primary)}.a-del{background:var(--danger)}
 [data-theme=dark] .a-star{background:#2b4a63;color:#cfe6f8!important}
 .fg{position:relative;background:var(--card);display:flex;align-items:flex-start;gap:12px;padding:14px 12px;transition:transform .2s;cursor:pointer;user-select:none;touch-action:pan-y}
@@ -540,6 +541,7 @@ function pickBg(f) {
 /* ---------- 작업 헬퍼 ---------- */
 const byId = id => S.tasks.find(t => t.id === id);
 function groupOf(t) {
+  if (t.wait && !t.done) return 'wait';
   if (!t.date) return 'none';
   const td = today();
   if (t.date < td) return 'late';
@@ -547,7 +549,7 @@ function groupOf(t) {
   if (t.date === addDays(td, 1)) return 'tomorrow';
   return 'later';
 }
-const GL = { late: '지연됨', today: '오늘', tomorrow: '내일', later: '이후', none: '날짜 없음', done: '오늘 완료' };
+const GL = { late: '지연됨', today: '오늘', tomorrow: '내일', later: '이후', none: '날짜 없음', wait: '대기', done: '오늘 완료' };
 function sortFn(a, b) {
   if (S.sort === 'manual') return (a.order || a.created) - (b.order || b.created);
   if (S.sort === 'prio' && a.prio !== b.prio) return a.prio - b.prio;
@@ -576,6 +578,7 @@ function nextDate(d, r) {
 function toggleDone(id) {
   const t = byId(id); if (!t) return;
   t.done = !t.done; t.doneAt = t.done ? Date.now() : null;
+  if (t.done) { delete t.wait; delete t.back; }
   if (t.done && t.repeat && t.repeat !== 'none') {
     let n = nextDate(t.date || today(), t.repeat);
     while (n <= today()) n = nextDate(n, t.repeat);
@@ -627,15 +630,20 @@ function rowHtml(t, grip) {
   if (t.time) meta.push(`<span class="m">${t.time}</span>`);
   if (t.cat) meta.push(`<span class="m">${esc(t.cat)}</span>`);
   if (t.repeat && t.repeat !== 'none') meta.push(`<span class="m">${ic('repeat', 13)}${{ daily: '매일', weekly: '매주', monthly: '매월' }[t.repeat]}</span>`);
+  if (t.wait) { meta.push(`<span class="m wt">${ic('hourglass', 13)}${esc(t.wait.who)}</span>`); if (t.wait.chk) meta.push(`<span class="m wt">${ic('cal', 13)}확인 ${t.wait.chk.slice(5).replace('-', '/')}</span>`); }
+  if (t.back && !t.done) meta.push(`<span class="m back">회신 확인${t.back.who ? ' · ' + esc(t.back.who) : ''}</span>`);
   if (remList(t).length) meta.push(`<span class="m">${ic('bell', 13)}</span>`);
   const left = t.subs.filter(s => !s.done).length, isOpen = S.openSubs ? ui.expanded[t.id] !== false : !!ui.expanded[t.id];
   const badge = t.subs.length ? `<button class="badge ${left ? '' : 'zero'}" data-act="sub-expand" data-id="${t.id}" aria-label="하위 작업 펼치기">${left || ic('check', 13)}</button>` : '';
   const subs = t.subs.length ? `<div class="subwrap ${isOpen ? 'open' : ''}"><div class="subs">${t.subs.map((s, i) => `<div class="sub ${s.done ? 'on' : ''}"><button class="chk ${s.done ? 'on' : ''}" data-act="sub-toggle" data-id="${t.id}" data-i="${i}">${s.done ? ic('check', 11) : ''}</button><span>${esc(s.t)}</span></div>`).join('')}</div></div>` : '';
-  return `<div class="row ${t.done ? 'done' : ''} ${ui.openRow === t.id ? 'swiped' : ''}" data-id="${t.id}">
-    <div class="actions">
+  return `<div class="row ${t.done ? 'done' : ''} ${t.wait && !t.done ? 'waiting' : ''} ${ui.openRow === t.id ? 'swiped' : ''}" data-id="${t.id}">
+    <div class="actions">${t.wait && !t.done ? `
+      <button class="a-resume" data-act="w-resume" data-id="${t.id}">${ic('repeat', 24)}다시 진행</button>
+      <button class="a-date" data-act="w-edit" data-id="${t.id}">${ic('cal', 24)}확인일</button>
+      <button class="a-done" data-act="done" data-id="${t.id}">${ic('check', 24)}완료</button>` : `
       <button class="a-star" data-act="star" data-id="${t.id}">${ic('star', 24, t.star ? 'star-on' : '')}별</button>
       <button class="a-date" data-act="date" data-id="${t.id}">${ic('cal', 24)}날짜</button>
-      <button class="a-focus" data-act="focus-task" data-id="${t.id}">${ic('hourglass', 24)}집중</button>
+      <button class="a-focus" data-act="focus-task" data-id="${t.id}">${ic('hourglass', 24)}집중</button>`}
       <button class="a-del" data-act="del" data-id="${t.id}">${ic('trash', 24)}삭제</button></div>
     <div class="fg ${ui.openRow === t.id ? 'open' : ''}" data-act="edit" data-id="${t.id}">
       <button class="chk ${t.done ? 'on' : ''}" data-act="done" data-id="${t.id}" aria-label="완료">${t.done ? ic('check', 14) : ''}</button>
@@ -648,12 +656,13 @@ const emptyArt = `<svg width="180" height="150" viewBox="0 0 180 150" fill="none
 function viewTasks() {
   const q = ui.search.trim().toLowerCase();
   const list = S.tasks.filter(t => (ui.cat === '모두' || t.cat === ui.cat) && (!q || t.title.toLowerCase().includes(q) || t.subs.some(s => s.t.toLowerCase().includes(q))));
-  const g = { late: [], today: [], tomorrow: [], later: [], none: [], done: [] }, td = today();
+  const g = { late: [], today: [], tomorrow: [], later: [], none: [], wait: [], done: [] }, td = today();
   list.forEach(t => { if (!t.done) g[groupOf(t)].push(t); else if (t.doneAt && ymd(new Date(t.doneAt)) === td) g.done.push(t); });
   g.done.sort((a, b) => b.doneAt - a.doneAt);
   const html = Object.keys(g).filter(k => g[k].length).map(k => {
-    const col = ui.collapsed[k];
-    return `<div class="grp" data-act="grp" data-v="${k}">${GL[k]} (${g[k].length}) ${ic(col ? 'chevD' : 'chevU', 18)}</div>${col ? '' : `<div class="glist" data-drow="task">${(k === 'done' ? g[k] : g[k].sort(sortFn)).map(t => rowHtml(t, k !== 'done')).join('')}</div>`}`;
+    const col = k === 'wait' ? ui.collapsed.wait !== false : ui.collapsed[k]; /* 대기 묶음은 기본 접힘 */
+    const srt = k === 'wait' ? (a, b) => (a.wait.chk || '9999').localeCompare(b.wait.chk || '9999') || a.created - b.created : sortFn;
+    return `<div class="grp" data-act="grp" data-v="${k}">${GL[k]} (${g[k].length}) ${ic(col ? 'chevD' : 'chevU', 18)}</div>${col ? '' : `<div class="glist" data-drow="task">${(k === 'done' ? g[k] : g[k].sort(srt)).map(t => rowHtml(t, k !== 'done' && k !== 'wait')).join('')}</div>`}`;
   }).join('');
   const link = list.some(t => t.done) ? `<button class="lnk" data-act="nav-page" data-v="completed">완료된 모든 작업 확인</button>` : '';
   if (!html) return `<div class="empty">${emptyArt}<div>${q ? '검색 결과가 없습니다.' : `이 카테고리에 작업이 없습니다.<br>'+' 버튼을 눌러 작업을 생성하세요.`}</div></div>${link}`;
@@ -911,7 +920,7 @@ function renderSheet() {
   const rm = remList(d).map(offLabel).join(', ');
   const row = (icon, label, chip, a, plain) => `<div class="trow"><span class="ti">${ic(icon, 26)}</span><span class="tl">${label}</span><button class="tchip ${plain ? 'plain' : ''}" data-act="${a}">${chip}</button></div>`;
   el.innerHTML = `<div class="tpage"><div class="thead"><button class="iconbtn" data-act="sheet-close" aria-label="뒤로">${ic('back')}</button><button class="iconbtn" data-act="t-menu" aria-label="메뉴">${ic('dots')}</button></div>
-    ${ui.tmenu ? `<div class="scrim" style="background:transparent;z-index:61" data-act="t-menu"></div><div class="menu" style="z-index:62"><button data-act="t-star"><span>${d.star ? '별표 해제' : '별표'}</span></button><button data-act="t-focus"><span>집중</span></button>${d.id ? `<button data-act="d-del" style="color:var(--danger)"><span>삭제</span></button>` : ''}</div>` : ''}
+    ${ui.tmenu ? `<div class="scrim" style="background:transparent;z-index:61" data-act="t-menu"></div><div class="menu" style="z-index:62"><button data-act="t-star"><span>${d.star ? '별표 해제' : '별표'}</span></button><button data-act="t-focus"><span>집중</span></button>${d.id ? (d.wait ? `<button data-act="d-resume"><span>다시 진행 (대기 해제)</span></button>` : `<button data-act="d-wait"><span>대기로 보내기</span></button>`) : ''}${d.id ? `<button data-act="d-del" style="color:var(--danger)"><span>삭제</span></button>` : ''}</div>` : ''}
     <div class="tbody">
       <button class="catchip" data-act="t-cat">${esc(d.cat || '카테고리 없음')}${ic('chevD', 16)}</button>
       <textarea class="ttitle" id="d-title" data-f="title" rows="1" placeholder="작업 입력" maxlength="120">${esc(d.title)}</textarea>
@@ -937,6 +946,18 @@ function commitDraft() {
   else { rec.id = uid(); rec.created = Date.now(); rec.doneAt = null; S.tasks.push(rec); placeByDate(rec); d.id = rec.id; }
   if (rec.remind !== '' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().then(() => { if (ui.page === 'settings') renderPage(); });
   save(); return true;
+}
+/* ---------- 대기: 누구/무엇을 기다리는지 + 다시 확인할 날짜(선택). 필드 t.wait={who,chk}, 확인일 도래 시 t.back={who} 배지 ---------- */
+function waitDialog(id) {
+  if (id) { const t = byId(id); if (!t) return; ui.wd = ui.wd && ui.wd.id === id ? ui.wd : { id, who: t.wait ? t.wait.who : '', date: t.wait ? t.wait.chk : '' }; }
+  const w = ui.wd; if (!w) return;
+  modal(byId(w.id).wait ? '대기 수정' : '대기로 보내기', `<input class="field" id="w-who" style="width:100%" maxlength="40" placeholder="누구/무엇을 기다리나요? (예: 김과장 회신)" value="${esc(w.who)}">
+    <button class="dprow" data-act="w-date" style="margin-top:10px">${ic('cal', 24)}<span>다시 확인할 날짜</span><small>${w.date ? w.date.replace(/-/g, '/') : '선택 안 함'}</small></button>`, () => {
+    const who = $('#w-who').value.trim(); if (!who) { toast('기다리는 대상을 입력하세요'); return false; }
+    const t = byId(w.id); if (!t) return;
+    t.wait = { who, chk: w.date || '' }; delete t.back; ui.wd = null; ui.openRow = null;
+    save(); render(); toast('대기로 보냈어요');
+  }, '저장');
 }
 function closeTask() {
   const d = ui.draft; if (!d) return;
@@ -992,7 +1013,7 @@ document.addEventListener('pointermove', e => { if (ui.tpDrag) tpPick(e); });
 document.addEventListener('pointerup', () => { if (ui.tpDrag) { ui.tpDrag = false; if (ui.tp && ui.tp.step === 'h') { ui.tp.step = 'm'; renderTp(); } } });
 /* ---------- 날짜 선택 팝업 (날짜/시간/알림/반복) ---------- */
 function openDp(tgt, id) {
-  const r = tgt === 'row' ? byId(id) : ui.draft, dt = parse(r.date || today());
+  const r = tgt === 'row' ? byId(id) : tgt === 'wait' ? ui.wd : ui.draft, dt = parse(r.date || today());
   ui.dp = { tgt, id, y: dt.getFullYear(), m: dt.getMonth(), date: r.date || '', time: r.time || '', reminds: remList(r).slice(), am: r.alertMode || 'both', rs: null, repeat: r.repeat || 'none', sub: null };
   renderDp();
 }
@@ -1021,14 +1042,15 @@ function renderDp() {
   let cells = '';
   for (let i = 0; i < 42; i++) { const c = new Date(start); c.setDate(start.getDate() + i); const s2 = ymd(c); cells += `<button class="${c.getMonth() !== d.m ? 'o' : ''} ${s2 === td ? 'td' : ''} ${s2 === d.date ? 'sel' : ''}" data-act="dp-day" data-v="${s2}">${c.getDate()}</button>`; }
   const chip = (l, v) => `<button class="${d.date === v ? 'sel' : ''}" data-act="dp-day" data-v="${v}">${l}</button>`;
+  const w = d.tgt === 'wait';
   const tm = d.time ? (+d.time.slice(0, 2) >= 12 ? '오후 ' : '오전 ') + ((+d.time.slice(0, 2)) % 12 || 12) + ':' + d.time.slice(3) : '아니요';
   const rm = d.time && d.reminds.length ? d.reminds.map(offLabel).join(', ') : '아니요';
   m.innerHTML = `<div class="dpbox"><div class="dpmon"><button data-act="dp-mon" data-v="-1" aria-label="이전 달">◀</button><span>${d.y}년 ${d.m + 1}월</span><button data-act="dp-mon" data-v="1" aria-label="다음 달">▶</button></div>
   <div class="dpgrid">${'일월화수목금토'.split('').map(w => `<b>${w}</b>`).join('')}${cells}</div>
   <div class="dpchips">${chip('오늘', td)}${chip('내일', addDays(td, 1))}${chip('3일 후', addDays(td, 3))}${chip('이번 주 일요일', sun)}${chip('날짜 없음', '')}</div>
-  <button class="dprow" data-act="dp-time">${ic('clock', 24)}<span>시간</span><small>${tm}</small></button>
+  ${w ? '' : `<button class="dprow" data-act="dp-time">${ic('clock', 24)}<span>시간</span><small>${tm}</small></button>
   <button class="dprow ${d.time ? '' : 'off'}" data-act="dp-sub" data-v="rem">${ic('bell', 24)}<span>알림</span><small>${rm}</small></button>
-  <button class="dprow" data-act="dp-sub" data-v="rpt">${ic('repeat', 24)}<span>반복</span><small>${RPT[d.repeat]}</small></button>
+  <button class="dprow" data-act="dp-sub" data-v="rpt">${ic('repeat', 24)}<span>반복</span><small>${RPT[d.repeat]}</small></button>`}
   <div class="dpfoot"><button data-act="dp-cancel">취소</button><button data-act="dp-ok">완료</button></div></div>`;
   m.classList.add('open'); modalCb = null;
 }
@@ -1146,11 +1168,24 @@ setInterval(() => {
 /* 알림 확인 */
 const remList = t => Array.isArray(t.reminds) ? t.reminds : (t.remind === '' || t.remind == null ? [] : [Number(t.remind)]);
 const offLabel = n => n === 0 ? '작업 시간에' : n % 1440 === 0 ? n / 1440 + '일 전' : n % 60 === 0 ? n / 60 + '시간 전' : n + '분 전';
+/* 확인 날짜가 된 대기 항목은 대기를 풀고 오늘 목록으로 되돌린다(날짜가 없거나 미래면 오늘로, 이미 지난 마감일은 지연됨으로 유지) */
+function checkWaits() {
+  const td = today(); let ch = false;
+  S.tasks.forEach(t => {
+    if (!t.wait || t.done || !t.wait.chk || t.wait.chk > td) return;
+    t.back = { who: t.wait.who }; delete t.wait;
+    if (!t.date || t.date > td) { t.date = td; placeByDate(t); }
+    t.notified = false; t.nfired = []; ch = true;
+    notify('다시 확인할 시간이에요', t.title + (t.back.who ? ' · ' + t.back.who : ''), t.alertMode || 'both');
+  });
+  if (ch) { save(); render(); }
+}
 function checkReminders() {
+  checkWaits();
   const now = Date.now(); let ch = false;
   S.tasks.forEach(t => {
     const offs = remList(t);
-    if (t.done || t.notified || !t.date || !offs.length) return;
+    if (t.done || t.wait || t.notified || !t.date || !offs.length) return;
     const [h, m] = (t.time || '09:00').split(':').map(Number), at = parse(t.date); at.setHours(h, m, 0, 0);
     t.nfired = t.nfired || [];
     offs.forEach(o => {
@@ -1221,7 +1256,7 @@ function gcStr(d, t, addMin) { const x = parse(d), [h, m] = t.split(':').map(Num
 function gcBody(t) {
   const desc = [t.memo, ...(t.subs || []).map(s => (s.done ? '☑ ' : '☐ ') + (s.t || s.title || s.text || ''))].filter(Boolean).join('\n');
   const rem = remList(t).filter(o => o >= 0 && o <= 40320).slice(0, 5);
-  const b = { summary: (t.done ? '✅ ' : '') + t.title, description: desc,
+  const b = { summary: (t.done ? '✅ ' : t.wait ? '⏳ ' : '') + t.title, description: desc,
     reminders: rem.length ? { useDefault: false, overrides: rem.map(m => ({ method: 'popup', minutes: m })) } : { useDefault: true },
     extendedProperties: { private: { todoAppId: t.id } } };
   if (t.time) { const z = gcTz(); b.start = { dateTime: gcStr(t.date, t.time, 0), timeZone: z }; b.end = { dateTime: gcStr(t.date, t.time, 60), timeZone: z }; }
@@ -1356,7 +1391,7 @@ document.addEventListener('click', e => {
     case 'del': delTask(id); toast('삭제했어요'); break;
     case 'sub-expand': { const w = b.closest('.row').querySelector('.subwrap'); if (w) { const o = !w.classList.contains('open'); w.classList.toggle('open', o); ui.expanded[id] = o; } break; }
     case 'sub-toggle': { const t = byId(id), s = t.subs[+b.dataset.i]; s.done = !s.done; save(); render(); break; }
-    case 'grp': ui.collapsed[v] = !ui.collapsed[v]; saveView(); renderMain(); break;
+    case 'grp': ui.collapsed[v] = v === 'wait' ? ui.collapsed.wait === false : !ui.collapsed[v]; saveView(); renderMain(); break;
     case 'cal-prev': ui.cal.m--; if (ui.cal.m < 0) { ui.cal.m = 11; ui.cal.y--; } render(); break;
     case 'cal-next': ui.cal.m++; if (ui.cal.m > 11) { ui.cal.m = 0; ui.cal.y++; } render(); break;
     case 'cal-today': ui.cal = { y: new Date().getFullYear(), m: new Date().getMonth() }; ui.selDate = today(); render(); break;
@@ -1367,6 +1402,11 @@ document.addEventListener('click', e => {
     case 'focus-next': if (ui.focusWeek < 0) ui.focusWeek++; renderMain(); break;
     /* 시트 */
     case 'sheet-close': closeTask(); break;
+    case 'd-wait': { ui.tmenu = false; if (!commitDraft()) { toast('제목을 입력하세요'); renderSheet(); break; } const wid = ui.draft.id; ui.draft = null; render(); ui.wd = null; waitDialog(wid); break; }
+    case 'd-resume': { const t = byId(ui.draft.id); if (t) { delete t.wait; save(); } ui.draft = null; ui.tmenu = false; render(); toast('다시 진행으로 돌려놨어요'); break; }
+    case 'w-resume': { const t = byId(id); if (t) { delete t.wait; ui.openRow = null; save(); render(); toast('다시 진행으로 돌려놨어요'); } break; }
+    case 'w-edit': ui.openRow = null; renderMain(); ui.wd = null; waitDialog(id); break;
+    case 'w-date': ui.wd.who = $('#w-who').value; openDp('wait'); break;
     case 't-menu': ui.tmenu = !ui.tmenu; renderSheet(); break;
     case 't-star': ui.draft.star = !ui.draft.star; ui.tmenu = false; renderSheet(); break;
     case 't-focus': ui.tmenu = false; if (!commitDraft()) { toast('제목을 입력하세요'); renderSheet(); break; } F.taskId = ui.draft.id; ui.draft = null; ui.page = 'focus'; render(); break;
@@ -1389,9 +1429,10 @@ document.addEventListener('click', e => {
     case 'dp-time-chip': { const t = ui.tp; if (v === '') { ui.dp.time = ''; ui.tp = null; renderDp(); break; } const H = +v.slice(0, 2); t.h = H % 12 || 12; t.m = +v.slice(3); t.pm = H >= 12; t.kb = false; renderTp(); break; }
     case 'dp-opt': { const d = ui.dp; d.repeat = v; d.sub = null; renderDp(); break; }
     case 'dp-back': ui.dp.sub = null; renderDp(); break;
-    case 'dp-cancel': closeDp(); break;
+    case 'dp-cancel': { const w = ui.dp.tgt === 'wait'; closeDp(); if (w) waitDialog(); break; }
     case 'dp-ok': {
-      const d = ui.dp, r = d.tgt === 'row' ? byId(d.id) : ui.draft;
+      const d = ui.dp, r = d.tgt === 'row' ? byId(d.id) : d.tgt === 'wait' ? ui.wd : ui.draft;
+      if (d.tgt === 'wait') { r.date = d.date || ''; closeDp(); waitDialog(); break; }
       r.date = d.date || null; r.time = d.time; r.alertMode = d.am; r.reminds = d.time ? d.reminds.slice() : []; r.remind = r.reminds.length ? r.reminds[0] : ''; r.repeat = d.repeat;
       if (d.tgt === 'row') { r.notified = false; r.nfired = []; save(); closeDp(); render(); } else { closeDp(); renderSheet(); }
       break; }
