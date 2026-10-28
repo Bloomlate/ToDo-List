@@ -1155,8 +1155,8 @@ function checkReminders() {
   if (ch) save();
 }
 /* ---------- 구글 캘린더 연동 (서버 없음: Google Identity Services 토큰 모델 + Calendar REST) ---------- */
-/* 클라이언트 ID(비밀 아님)는 설정 화면에서 붙여넣으면 이 브라우저에 저장돼요. 코드에 직접 넣으려면 아래 값을 채우세요. */
-const GOOGLE_CLIENT_ID = '';
+/* 기본 클라이언트 ID(공개 정보, 시크릿은 쓰지 않음). 설정 화면에서 붙여넣으면 이 브라우저에서는 그 값이 우선해요. */
+const GOOGLE_CLIENT_ID = '67888104088-0g4gsq7m8a6khei6g0f788rpevj6a6l5.apps.googleusercontent.com';
 const GSCOPE = 'https://www.googleapis.com/auth/calendar.events';
 const GAPI = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
 const GC = { tok: null, exp: 0, busy: false, err: '', loading: null, timer: null, lastSig: '' };
@@ -1284,7 +1284,8 @@ function gcSettingsHtml() {
   const last = c.last ? new Date(c.last) : null;
   return `<div class="tsec" style="margin-top:18px">구글 캘린더 연결</div><div class="card" style="padding:4px 18px">
     <div class="setrow" style="align-items:stretch;flex-direction:column;gap:8px"><div>OAuth 클라이언트 ID<small>구글 클라우드 콘솔에서 발급한 웹 클라이언트 ID를 붙여넣으세요 (비밀 정보 아님, 이 브라우저에만 저장)</small></div>
-      <div style="display:flex;gap:8px"><input id="gid" value="${esc(c.id)}" placeholder="xxxx.apps.googleusercontent.com" autocomplete="off" style="flex:1;min-width:0;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg)"><button class="qbtn" data-act="g-saveid">저장</button></div></div>
+      <div style="display:flex;gap:8px"><input id="gid" value="${esc(c.id)}" placeholder="비워 두면 기본 ID 사용" autocomplete="off" style="flex:1;min-width:0;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg)"><button class="qbtn" data-act="g-saveid">저장</button></div></div>
+    <div class="kv" style="padding:10px 0;border-bottom:1px solid var(--line)">처음 연결하면 '확인되지 않은 앱' 경고가 나와요: <b>고급 → ‘bloomlate.github.io(안전하지 않음)’로 이동</b> → 권한 허용 순서로 진행하세요.</div>
     <div class="setrow"><div>상태<small id="gstat" style="${GC.err ? 'color:var(--danger)' : ''}">${esc(GC.err || st)}</small></div>
       ${c.on ? `<span style="display:flex;gap:6px">${gcOk() ? '' : '<button class="qbtn sel" data-act="g-connect">재연결</button>'}<button class="qbtn" data-act="g-disconnect">해제</button></span>` : '<button class="qbtn sel" data-act="g-connect">연결</button>'}</div>
     <div class="setrow"><div>동기화<small>마지막: ${last ? `${last.getMonth() + 1}/${last.getDate()} ${pad(last.getHours())}:${pad(last.getMinutes())}` : '아직 없음'} · 날짜 있는 할 일 ↔ 기본 캘린더</small></div><button class="qbtn" data-act="g-sync">지금 동기화</button></div></div>`;
