@@ -38,8 +38,9 @@ input,select,textarea{font:inherit;color:inherit}
 .searchbar{margin:0 16px 6px;display:flex;align-items:center;gap:8px;background:var(--card);border-radius:14px;padding:0 12px;border:1px solid var(--line)}
 .searchbar input{flex:1;border:0;background:none;height:42px;outline:0;color:var(--text)}
 #main{flex:1;overflow-y:auto;padding:0 16px 168px;position:relative}
-.grp{display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px;color:var(--sub);opacity:.85;margin:14px 4px 8px;cursor:pointer;user-select:none}
+.grp{display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px;color:var(--sub);opacity:.85;margin:24px 4px 8px;cursor:pointer;user-select:none}
 .grp .ic{color:var(--sub)}
+#main>.grp:first-child{margin-top:8px}
 .lnk{display:block;margin:26px auto 0;text-align:center;color:var(--sub);text-decoration:underline;text-underline-offset:4px;font-size:15px}
 .done .chk.on{background:#c3c9cf!important;border-color:#c3c9cf!important}
 [data-theme=dark] .done .chk.on{background:#4a5560!important;border-color:#4a5560!important}
@@ -60,7 +61,7 @@ input,select,textarea{font:inherit;color:inherit}
 .row.waiting .fg{opacity:.62}.row.waiting .t{color:var(--sub)}.meta .m.wt{color:var(--sub)}.meta .m.back{color:#e8557a;font-weight:700}.a-resume{background:#7a8a99}.a-done{background:#2e9d6b}
 .a-star{background:#bcdcf7;color:#5b7287!important}.a-date{background:#5fb4ff}.a-focus{background:var(--primary)}.a-del{background:var(--danger)}
 [data-theme=dark] .a-star{background:#2b4a63;color:#cfe6f8!important}
-.fg{position:relative;background:var(--card);display:flex;align-items:flex-start;gap:12px;padding:14px 12px;transition:transform .2s;cursor:pointer;user-select:none;touch-action:pan-y}
+.fg{position:relative;background:var(--card);display:flex;align-items:flex-start;gap:12px;padding:10px 12px;transition:transform .2s;cursor:pointer;user-select:none;touch-action:pan-y}
 .fg.drag{transition:none}
 .fg.open{transform:translateX(-244px)}
 .chk{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--sub);display:grid;place-items:center;color:#fff;margin-top:1px;opacity:.85}
