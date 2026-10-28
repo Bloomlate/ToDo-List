@@ -26,16 +26,18 @@ input,select,textarea{font:inherit;color:inherit}
 @media(min-width:500px){.app{height:min(calc(100dvh - 40px),860px);margin:20px auto;border-radius:28px;box-shadow:0 20px 60px rgba(30,60,90,.25)}}
 .ic{flex:none;display:block}
 #topbar{flex:none;min-height:56px;padding:10px 12px 4px;display:flex;align-items:center;gap:8px}
-.chips{display:flex;gap:10px;overflow-x:auto;flex:1;scrollbar-width:none;padding:6px 6px}
+.chips{display:flex;gap:8px;overflow-x:auto;flex:1;scrollbar-width:none;padding:6px 28px 6px 6px;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent)}
 .chips::-webkit-scrollbar{display:none}
-.chips.wrap{flex-wrap:wrap;overflow-x:visible;gap:8px}
+.chips.wrap{flex-wrap:wrap;overflow-x:visible;gap:8px;padding-right:6px;-webkit-mask-image:none;mask-image:none}
 #topbar:has(.chips.wrap){align-items:flex-start}#topbar:has(.chips.wrap) .chips{min-width:0}
-.chip{flex:none;padding:8px 18px;border-radius:20px;background:var(--chip);color:var(--sub);font-size:15px}
+.chip{flex:none;display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:17px;background:var(--chip);color:var(--sub);font-size:14px;white-space:nowrap}
 .chip.sel{background:var(--chipsel);color:var(--primary);font-weight:700}
-.chip.cc{background:color-mix(in srgb,var(--cc) 30%,var(--bg));color:var(--text)}
-.chip.cc.sel{background:var(--cc);color:var(--ct);font-weight:700;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--cc),0 3px 8px rgba(0,0,0,.22)}
+.chip.cc{background:transparent;color:var(--cc);box-shadow:inset 0 0 0 1px var(--cc)}
+.chip.cc:not(.all)::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--cc);margin-right:6px;flex:none}
+.chip.cc.sel{background:var(--cc);color:var(--ct);font-weight:700}
+.chip.cc.sel:not(.all)::before{background:var(--ct)}
 .chip.cc.all{--cc:var(--primary);--ct:#fff}
-.chip.add{padding:8px 12px}
+.chip.add{padding:0 10px}
 .iconbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--sub);flex:none}
 .iconbtn:active{background:var(--chip)}
 .searchbar{margin:0 16px 6px;display:flex;align-items:center;gap:8px;background:var(--card);border-radius:14px;padding:0 12px;border:1px solid var(--line)}
@@ -735,12 +737,12 @@ function viewCal() {
   const first = new Date(y, m, 1), start = first.getDay();
   const rows = Math.ceil((start + new Date(y, m + 1, 0).getDate()) / 7);
   const td = today();
-  const cnt = {}, gcnt = {}; S.tasks.forEach(t => { if (t.date && !t.done) cnt[t.date] = (cnt[t.date] || 0) + 1; });
+  const cnt = {}, gcnt = {}; S.tasks.forEach(t => { if (t.date && !t.done) (cnt[t.date] = cnt[t.date] || []).push(t.cat && S.cats.includes(t.cat) ? catColor(t.cat) : ''); });
   const gev = (S.gcal && S.gcal.on && S.gcal.ev) || []; gev.forEach(e => e.d.forEach(d => gcnt[d] = 1));
   let cells = '';
   for (let i = 0; i < rows * 7; i++) {
-    const d = new Date(y, m, 1 - start + i), k = ymd(d), c = Math.min(cnt[k] || 0, 3);
-    cells += `<button class="day ${d.getMonth() !== m ? 'out' : ''} ${k === td ? 'today' : ''} ${k === ui.selDate ? 'sel' : ''}" data-act="cal-day" data-v="${k}"><span class="n">${d.getDate()}</span>${c || gcnt[k] ? `<span class="dots">${'<i></i>'.repeat(c)}${gcnt[k] ? '<i class="g"></i>' : ''}</span>` : ''}</button>`;
+    const d = new Date(y, m, 1 - start + i), k = ymd(d), c = (cnt[k] || []).slice(0, 3);
+    cells += `<button class="day ${d.getMonth() !== m ? 'out' : ''} ${k === td ? 'today' : ''} ${k === ui.selDate ? 'sel' : ''}" data-act="cal-day" data-v="${k}"><span class="n">${d.getDate()}</span>${c.length || gcnt[k] ? `<span class="dots">${c.map(x => `<i${x ? ` style="background:${x}"` : ''}></i>`).join('')}${gcnt[k] ? '<i class="g"></i>' : ''}</span>` : ''}</button>`;
   }
   const sd = parse(ui.selDate);
   const list = S.tasks.filter(t => t.date === ui.selDate).sort((a, b) => (a.done - b.done) || sortFn(a, b));
