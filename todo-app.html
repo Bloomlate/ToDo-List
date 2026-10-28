@@ -361,9 +361,19 @@ input,select,textarea{font:inherit;color:inherit}
 .strow .ssub{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:14px;text-align:left}.strow .ssub .chk{width:18px;height:18px;border-width:1.5px;margin:0}
 .strow.lift{position:relative;z-index:5;box-shadow:0 8px 22px rgba(0,0,0,.22);transition:none}
 .cdot{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--card);box-shadow:0 0 0 1px var(--line)}
-.cpal{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;justify-items:center}
-.cpal button{width:38px;height:38px;border-radius:50%;border:3px solid transparent;background-clip:padding-box;box-shadow:inset 0 0 0 2px var(--card)}
-.cpal button.on{border-color:var(--text,currentColor)}
+.cpal{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;justify-items:center}
+.cpal button{width:40px;height:40px;border-radius:50%;border:0;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(128,128,128,.28);position:relative}
+.cpal button.on{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--text)}
+.cpal button.rb{background:conic-gradient(#f44,#fc3,#4c4,#3cf,#74f,#f4a,#f44);color:#fff}
+.cpal.inpage{padding:6px 4px;gap:12px 8px}
+.hsv{touch-action:none;user-select:none}
+.hsv .sv{position:relative;height:150px;border-radius:12px;touch-action:none;background:linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,transparent),var(--hue,#f00)}
+.hsv .knob{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 1px 4px rgba(0,0,0,.4);pointer-events:none}
+.hsv .hue{position:relative;height:18px;margin:14px 0 12px;border-radius:9px;touch-action:none;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+.hsv .hue .knob{top:50%}
+.hsv .pv{display:flex;align-items:center;gap:12px}
+.hsv .pv i{width:40px;height:40px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(128,128,128,.35);flex:none}
+.hsv .pv input{flex:1;min-width:0;font-family:monospace;text-transform:uppercase}
 .chip .cd,.m .cd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
 .m .cd{margin-right:3px}
 .catrow:last-child{border:0}.catrow .nm{flex:1}
@@ -405,8 +415,7 @@ const MEDAL = { 1: ['#c9706c', '#d9b560', '#9a7a2e'], 2: ['#7390bd', '#aeb7c2', 
 const medal = (r, s = 22) => { const [rb, c, d] = MEDAL[r]; return `<svg class="medal" width="${s}" height="${s}" viewBox="0 0 32 32"><path d="M8 1h7l4 11h-7z" fill="${rb}"/><path d="M24 1h-7l-4 11h7z" fill="${rb}" opacity=".85"/><circle cx="16" cy="21" r="9.5" fill="${c}" stroke="${d}" stroke-width="1.2"/><text x="16" y="25" text-anchor="middle" font-size="11.5" font-weight="800" fill="#fff" stroke="${d}" stroke-width=".4">${r}</text></svg>`; };
 const SORTS = { manual: '직접 정렬', date: '날짜순', prio: '우선순위순', created: '생성순' };
 const CATCOL = ['#0a8cff', '#7c6cf0', '#f06292', '#ffb300', '#26a69a', '#ef6c00', '#8d6e63', '#78909c'];
-const CATPAL = [...CATCOL, '#e53935', '#43a047'];
-const ACCENTS = [['파랑', '#0a8cff'], ['하늘', '#2bb3e6'], ['남색', '#3f5bd8'], ['청록', '#12a3a0']];
+const CATPAL = ['#e53935', '#ef6c00', '#ffb300', '#43a047', '#26a69a', '#0a8cff', '#3f5bd8', '#7c6cf0', '#f06292', '#8d6e63', '#78909c', '#3a3a44'];
 
 /* ---------- 아이콘 ---------- */
 const I = {
@@ -503,7 +512,6 @@ const fElapsed = () => F.base + (F.running ? (Date.now() - F.t0) / 1000 : 0);
 const fStarted = () => F.running || (F.mode === 'timer' ? F.left < F.dur * 60 : F.base > 0);
 
 /* ---------- 테마 ---------- */
-const COLORS = [['파랑', '#0a8cff'], ['분홍', '#ff6b9d'], ['청록', '#1a9e8f'], ['먹색', '#3a3a44'], ['빨강', '#d93636'], ['노랑', '#f2b13e'], ['초록', '#0a8a5c'], ['주황', '#ff7a1a'], ['보라', '#8b4dff']];
 const svgU = s => "url('data:image/svg+xml;utf8," + encodeURIComponent(s).replace(/'/g, '%27') + "')";
 const tex = (base, f, seed) => svgU(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="f"><feTurbulence type="fractalNoise" baseFrequency="${f}" numOctaves="3" seed="${seed}"/><feColorMatrix values="0 0 0 0 .45 0 0 0 0 .4 0 0 0 0 .35 0 0 0 .22 0"/></filter><rect width="200" height="200" fill="${base}"/><rect width="200" height="200" filter="url(#f)"/></svg>`);
 const TEX = [['#fbfbf8', .55, '#5b8def', 1], ['#f4efe6', .9, '#e05a5a', 2], ['#f1f3fb', .45, '#8c5ad8', 3], ['#f6f6f4', 1.3, '#1f9a74', 4]].map(([b, f, c, n]) => [tex(b, f, n), c]);
@@ -872,10 +880,9 @@ function pageBody() {
     }).join('')}</div>` : `<div class="hempty"><div>작은 습관 하나로 시작하세요.<br>습관을 추가하려면 “+”를 누르세요.</div></div>`}<button class="hfab" data-act="habit-new" aria-label="습관 추가">${ic('plus', 30)}</button>`;
   }
   if (p === 'theme') {
-    const bg = S.bg || { t: 'color' }, ck = `<span class="tck">${ic('check', 14)}</span>`, isC = c => (bg.t || 'color') === 'color' && S.accent === c;
-    const chip = ([n, c]) => `<button class="tchip" style="background:${c}" data-act="bg-set" data-v="color:${c}" aria-label="${n}">${isC(c) ? ck : ''}</button>`;
+    const bg = S.bg || { t: 'color' }, ck = `<span class="tck">${ic('check', 14)}</span>`;
     return `<div class="card"><h3>화면 모드</h3><div class="themeopts">${[['light', '라이트', 'sun'], ['dark', '다크', 'moon']].map(([v, l, i]) => `<button class="${S.theme === v ? 'sel' : ''}" data-act="theme-set" data-v="${v}">${ic(i, 26)}${l}</button>`).join('')}</div></div>
-    <div class="tsec">순수한 색상</div><div class="cg">${COLORS.slice(0, 4).map(chip).join('')}</div><div class="cbox"><div class="cg">${COLORS.slice(4).map(chip).join('')}</div></div>
+    <div class="tsec">순수한 색상</div><div class="card" style="padding:14px 10px">${colorPalette((bg.t || 'color') === 'color' ? S.accent : '', 'bg-set-col', 'theme-custom', 'inpage')}</div>
     <div class="tsec">텍스처</div><div class="tg">${TEX.map((t, i) => `<button class="ttex ${bg.t === 'tex' && +bg.id === i ? 'sel' : ''}" style="background-image:${t[0]}" data-act="bg-set" data-v="tex:${i}" aria-label="텍스처 ${i + 1}"><i><b style="background:${t[1]}"></b></i>${bg.t === 'tex' && +bg.id === i ? ck : ''}</button>`).join('')}</div>
     <div class="tsec">풍경</div><div class="sg">${SCN.map(x => { const on = bg.t === 'scene' && bg.id === x[0]; return `<button class="tsc ${on ? 'sel' : ''}" style="background-image:${scImg(x)}" data-act="bg-set" data-v="scene:${x[0]}" aria-label="${x[1]}">${on ? ck : ''}</button>`; }).join('')}</div>
     <div class="tsec">맞춤설정</div><div class="sg">${S.customBg ? `<button class="tsc ${bg.t === 'custom' ? 'sel' : ''}" style="background-image:url(&quot;${S.customBg}&quot;)" data-act="bg-set" data-v="custom" aria-label="내 사진">${bg.t === 'custom' ? ck : ''}</button>` : ''}<button class="tsc tadd" data-act="bg-add" aria-label="내 사진 추가">${ic('plus', 36)}</button></div>`;
@@ -1016,11 +1023,45 @@ function taskDialog(kind) {
 }
 
 /* ---------- 모달 / 토스트 ---------- */
+/* ---------- 공용 컬러 스와치 팔레트 + 직접 선택(HSV) 피커 ---------- */
+const hexOk = h => /^#[0-9a-f]{6}$/i.test(h);
+const onCol = h => { const n = parseInt(h.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)); return l > 170 ? '#222' : '#fff'; };
+const hsv2hex = (h, s, v) => { const f = n => { const k = (n + h / 60) % 6, x = v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); return Math.round(x * 255).toString(16).padStart(2, '0'); }; return '#' + f(5) + f(3) + f(1); };
+const hex2hsv = h => { const n = parseInt(h.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), d = mx - Math.min(r, g, b); let H = 0; if (d) H = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return { h: H * 60, s: mx ? d / mx : 0, v: mx }; };
+/* cur: 현재 색, act: 팔레트 색을 눌렀을 때 data-act (data-v=색), custom: '직접 선택' 눌렀을 때 data-act */
+function colorPalette(cur, act, custom, cls = '') {
+  const lc = (cur || '').toLowerCase(), inPal = CATPAL.includes(lc), ck = c => ic('check', 20).replace('<svg', `<svg style="color:${onCol(c)}"`);
+  return `<div class="cpal ${cls}">${CATPAL.map(c => `<button class="${c === lc ? 'on' : ''}" style="background:${c}" data-act="${act}" data-v="${c}" aria-label="${c}">${c === lc ? ck(c) : ''}</button>`).join('')}<button class="rb ${lc && !inPal ? 'on' : ''}" ${lc && !inPal ? `style="background:${lc}"` : ''} data-act="${custom}" aria-label="직접 선택">${lc && !inPal ? ck(lc) : ic('plus', 22)}</button></div>`;
+}
+function openHsv(init, onOk, onBack) {
+  const c = hexOk(init) ? init : '#0a8cff', st = hex2hsv(c);
+  ui.hsv = { ...st, onOk, onBack };
+  modal('직접 선택', `<div class="hsv"><div class="sv" id="hsv-sv"><div class="knob" id="hsv-k"></div></div><div class="hue" id="hsv-hue"><div class="knob" id="hsv-hk"></div></div><div class="pv"><i id="hsv-pv"></i><input class="field" id="hsv-hex" maxlength="7" autocapitalize="off" spellcheck="false"></div></div>`,
+    () => { const x = ui.hsv, col = hsv2hex(x.h, x.s, x.v); if (!hexOk(col)) return false; ui.hsv = null; closeModal(); x.onOk(col); return false; });
+  $('#modal [data-act="modal-cancel"]').dataset.act = 'hsv-cancel';
+  hsvPaint();
+  const drag = (el, fn) => { const mv = e => { const r = el.getBoundingClientRect(); fn(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))); hsvPaint(); };
+    el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); mv(e); el.onpointermove = mv; }); el.onpointerup = el.onpointercancel = () => { el.onpointermove = null; }; };
+  drag($('#hsv-sv'), (x, y) => { ui.hsv.s = x; ui.hsv.v = 1 - y; });
+  drag($('#hsv-hue'), x => { ui.hsv.h = Math.min(359.99, x * 360); });
+  $('#hsv-hex').addEventListener('input', e => { let t = e.target.value.trim(); if (t && t[0] !== '#') t = '#' + t; if (t.length === 4) t = '#' + [...t.slice(1)].map(ch => ch + ch).join(''); if (hexOk(t)) { Object.assign(ui.hsv, hex2hsv(t)); hsvPaint(true); } });
+}
+function hsvPaint(typed) {
+  const x = ui.hsv; if (!x) return; const col = hsv2hex(x.h, x.s, x.v);
+  $('#hsv-sv').style.setProperty('--hue', hsv2hex(x.h, 1, 1));
+  const k = $('#hsv-k'); k.style.left = x.s * 100 + '%'; k.style.top = (1 - x.v) * 100 + '%'; k.style.background = col;
+  const hk = $('#hsv-hk'); hk.style.left = x.h / 360 * 100 + '%'; hk.style.background = hsv2hex(x.h, 1, 1);
+  $('#hsv-pv').style.background = col; const hx = $('#hsv-hex'); if (!typed) hx.value = col.toUpperCase();
+}
 let modalCb = null;
 function modal(title, body, ok, okText = '확인') {
   modalCb = ok; const m = $('#modal');
   m.innerHTML = `<div class="box"><h4>${esc(title)}</h4><div id="mbody">${body}</div><div class="btns"><button class="btn" data-act="modal-cancel">취소</button><button class="btn pri" data-act="modal-ok">${okText}</button></div></div>`;
   m.classList.add('open'); const i = m.querySelector('input'); if (i) setTimeout(() => i.focus(), 30);
+}
+function catColorModal(n) {
+  ui.pickCat = n; modal('색 선택 · ' + n, colorPalette(catColor(n), 'cat-col-pick', 'cat-col-custom'), null);
+  const ok = $('#modal .btn.pri'); if (ok) ok.remove();
 }
 const closeModal = () => { $('#modal').classList.remove('open'); modalCb = null; };
 const askText = (title, val, cb) => modal(title, `<input class="field" id="m-in" style="width:100%" maxlength="30" value="${esc(val)}">`, () => { const v = $('#m-in').value.trim(); if (!v) return false; return cb(v); });
@@ -1491,7 +1532,9 @@ document.addEventListener('click', e => {
     /* 테마 / 설정 */
     case 'theme-toggle': S.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; save(); render(); break;
     case 'theme-set': S.theme = v; save(); render(); break;
-    case 'accent-set': S.accent = v; S.bg = { t: 'color' }; save(); render(); break;
+    case 'bg-set-col': setBg('color:' + v); break;
+    case 'theme-custom': openHsv(((S.bg || {}).t || 'color') === 'color' ? S.accent : S.accent, c => setBg('color:' + c)); break;
+    case 'hsv-cancel': { const x = ui.hsv; ui.hsv = null; closeModal(); if (x && x.onBack) x.onBack(); break; }
     case 'bg-set': setBg(v); break;
     case 'bg-add': $('#bgfile').click(); break;
     case 'notif': if ('Notification' in window) Notification.requestPermission().then(renderPage); else toast('알림을 지원하지 않는 브라우저예요'); break;
@@ -1499,9 +1542,9 @@ document.addEventListener('click', e => {
     case 'import': $('#importfile').click(); break;
     case 'reset': modal('모든 데이터 삭제', '작업, 습관, 집중 기록이 모두 지워지고 되돌릴 수 없어요. 계속할까요?', () => { localStorage.removeItem(KEY); S = defaults(); ui.page = null; render(); toast('초기화했어요'); }, '삭제'); break;
     /* 카테고리 관리 */
-    case 'cat-color': { const cur = catColor(v); ui.pickCol = cur;
-      modal('색 선택 · ' + v, `<div class="cpal">${CATPAL.map(c => `<button class="${c === cur ? 'on' : ''}" style="background:${c}" data-act="cat-col-pick" data-v="${c}" aria-label="${c}"></button>`).join('')}</div>`, () => { S.catCol[v] = ui.pickCol; save(); render(); }); break; }
-    case 'cat-col-pick': ui.pickCol = v; document.querySelectorAll('.cpal button').forEach(x => x.classList.toggle('on', x.dataset.v === v)); break;
+    case 'cat-color': catColorModal(v); break;
+    case 'cat-col-pick': { const n = ui.pickCat; S.catCol[n] = v; save(); closeModal(); render(); break; }
+    case 'cat-col-custom': { const n = ui.pickCat; openHsv(catColor(n), c => { S.catCol[n] = c; save(); render(); }, () => catColorModal(n)); break; }
     case 'cat-new': { const i = $('#newcat'), n = i.value.trim(); if (n && !S.cats.includes(n)) { addCat(n); save(); render(); } else if (n) toast('이미 있는 카테고리예요'); break; }
     case 'g-saveid': { const c = gcfg(), n = ($('#gid').value || '').trim(); if (n !== c.id) { c.id = n; if (c.on) { c.on = false; GC.tok = null; } save(); } toast(n ? '클라이언트 ID를 저장했어요' : '클라이언트 ID를 지웠어요'); if (n) gcLoad().catch(() => {}); renderPage(); break; }
     case 'g-connect': gcConnect(); break;
