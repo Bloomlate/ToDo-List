@@ -65,10 +65,19 @@ input,select,textarea{font:inherit;color:inherit}
 .fg.drag{transition:none}
 .fg.open{transform:translateX(-244px)}
 .chk{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--sub);display:grid;place-items:center;color:#fff;margin-top:1px;opacity:.85}
+.fg>.chk{border:2.5px solid color-mix(in srgb,var(--text) 58%,var(--card));opacity:1;position:relative}
+.fg>.chk::before{content:"";position:absolute;inset:-10px}
+.fg>.chk.on{border-color:var(--primary)}
+.cbar{position:absolute;left:0;top:0;bottom:0;width:4px}
+.done .cbar{opacity:.35}
+.grp.late,.grp.late .ic{color:var(--danger);opacity:1}
+.meta .m.cat{color:var(--sub);opacity:.8}
+.fg{-webkit-touch-callout:none}
 .chk.on{background:var(--primary);border-color:var(--primary);opacity:1}
 .medalbtn{display:grid;place-items:center;width:32px;height:32px;border-radius:50%}
 .medalbtn:active{background:var(--chip)}
 .done .medal{filter:grayscale(1);opacity:.5}
+.row .grip{display:none}.row.lift .grip{display:grid}
 .grip{flex:none;display:grid;place-items:center;width:28px;height:30px;color:var(--sub);opacity:.3;touch-action:none;cursor:grab;margin-right:-6px}
 .row.lift,.subedit.lift,.catrow.lift{position:relative;z-index:5;box-shadow:0 8px 22px rgba(0,0,0,.22);background:var(--card);border-radius:14px;transition:none}
 .glist{position:relative}
@@ -635,12 +644,23 @@ function renderNav() {
 }
 
 /* ---------- 렌더: 작업 행 ---------- */
-function rowHtml(t, grip) {
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+function relDate(d) {
+  const td = today();
+  if (d === td) return '오늘';
+  if (d === addDays(td, 1)) return '내일';
+  if (d === addDays(td, 2)) return '모레';
+  if (d === addDays(td, -1)) return '어제';
+  const x = parse(d);
+  return (x.getMonth() + 1) + '/' + x.getDate() + ' ' + WD[x.getDay()];
+}
+function rowHtml(t, grip, grp) {
   const meta = [];
   const td = today();
-  if (t.date && t.date !== td) meta.push(`<span class="m ${t.date < td && !t.done ? 'late' : ''}">${ic('cal', 13)}${t.date.slice(5).replace('-', '/')}</span>`);
-  if (t.time) meta.push(`<span class="m">${t.time}</span>`);
-  if (t.cat) meta.push(`<span class="m" style="color:${catColor(t.cat)}">${S.cats.includes(t.cat) ? '<i class="cd" style="background:' + catColor(t.cat) + '"></i>' : ''}${esc(t.cat)}</span>`);
+  const isLate = t.date && t.date < td && !t.done;
+  if (t.date && t.date !== td && !(grp === 'tomorrow' && t.date === addDays(td, 1))) meta.push(`<span class="m ${isLate ? 'late' : ''}">${ic('cal', 13)}${relDate(t.date)}</span>`);
+  if (t.time) meta.push(`<span class="m ${isLate ? 'late' : ''}">${t.time}</span>`);
+  if (t.cat) meta.push(`<span class="m cat">${esc(t.cat)}</span>`);
   if (t.repeat && t.repeat !== 'none') meta.push(`<span class="m">${ic('repeat', 13)}${{ daily: '매일', weekly: '매주', monthly: '매월' }[t.repeat]}</span>`);
   if (t.wait) { meta.push(`<span class="m wt">${ic('hourglass', 13)}${esc(t.wait.who)}</span>`); if (t.wait.chk) meta.push(`<span class="m wt">${ic('cal', 13)}확인 ${t.wait.chk.slice(5).replace('-', '/')}</span>`); }
   if (t.back && !t.done) meta.push(`<span class="m back">회신 확인${t.back.who ? ' · ' + esc(t.back.who) : ''}</span>`);
@@ -648,7 +668,7 @@ function rowHtml(t, grip) {
   const left = t.subs.filter(s => !s.done).length, isOpen = S.openSubs ? ui.expanded[t.id] !== false : !!ui.expanded[t.id];
   const badge = t.subs.length ? `<button class="badge ${left ? '' : 'zero'}" data-act="sub-expand" data-id="${t.id}" aria-label="하위 작업 펼치기">${left || ic('check', 13)}</button>` : '';
   const subs = t.subs.length ? `<div class="subwrap ${isOpen ? 'open' : ''}"><div class="subs">${t.subs.map((s, i) => `<div class="sub ${s.done ? 'on' : ''}"><button class="chk ${s.done ? 'on' : ''}" data-act="sub-toggle" data-id="${t.id}" data-i="${i}">${s.done ? ic('check', 11) : ''}</button><span>${esc(s.t)}</span></div>`).join('')}</div></div>` : '';
-  return `<div class="row ${t.done ? 'done' : ''} ${t.wait && !t.done ? 'waiting' : ''} ${ui.openRow === t.id ? 'swiped' : ''}" data-id="${t.id}">
+  return `<div class="row ${t.done ? 'done' : ''} ${t.wait && !t.done ? 'waiting' : ''} ${ui.openRow === t.id ? 'swiped' : ''}" data-id="${t.id}"${grip ? ' data-lp="1"' : ''}>
     <div class="actions">${t.wait && !t.done ? `
       <button class="a-resume" data-act="w-resume" data-id="${t.id}">${ic('repeat', 24)}다시 진행</button>
       <button class="a-date" data-act="w-edit" data-id="${t.id}">${ic('cal', 24)}확인일</button>
@@ -658,7 +678,7 @@ function rowHtml(t, grip) {
       <button class="a-focus" data-act="focus-task" data-id="${t.id}">${ic('hourglass', 24)}집중</button>`}
       <button class="a-del" data-act="del" data-id="${t.id}">${ic('trash', 24)}삭제</button></div>
     <div class="fg ${ui.openRow === t.id ? 'open' : ''}" data-act="edit" data-id="${t.id}">
-      <button class="chk ${t.done ? 'on' : ''}" data-act="done" data-id="${t.id}" aria-label="완료">${t.done ? ic('check', 14) : ''}</button>
+      ${t.cat && S.cats.includes(t.cat) ? `<i class="cbar" style="background:${catColor(t.cat)}"></i>` : ''}<button class="chk ${t.done ? 'on' : ''}" data-act="done" data-id="${t.id}" aria-label="완료">${t.done ? ic('check', 14) : ''}</button>
       <div class="body"><div class="t">${t.star ? `<span class="star-on" style="margin-right:4px">★</span>` : ''}${esc(t.title)}</div>${meta.length ? `<div class="meta">${meta.join('')}</div>` : ''}${subs}</div>
       <div class="rt"><button class="medalbtn" data-act="prio-pick" data-id="${t.id}" aria-label="우선순위 ${t.prio}순위">${medal(t.prio || 3)}</button>${badge}${grip ? `<span class="grip" data-act="noop" aria-label="순서 변경">${ic('grab', 22)}</span>` : ''}</div>
     </div></div>`;
@@ -674,7 +694,7 @@ function viewTasks() {
   const html = Object.keys(g).filter(k => g[k].length).map(k => {
     const col = k === 'wait' ? ui.collapsed.wait !== false : ui.collapsed[k]; /* 대기 묶음은 기본 접힘 */
     const srt = k === 'wait' ? (a, b) => (a.wait.chk || '9999').localeCompare(b.wait.chk || '9999') || a.created - b.created : sortFn;
-    return `<div class="grp" data-act="grp" data-v="${k}">${GL[k]} (${g[k].length}) ${ic(col ? 'chevD' : 'chevU', 18)}</div>${col ? '' : `<div class="glist" data-drow="task">${(k === 'done' ? g[k] : g[k].sort(srt)).map(t => rowHtml(t, k !== 'done' && k !== 'wait')).join('')}</div>`}`;
+    return `<div class="grp ${k}" data-act="grp" data-v="${k}">${GL[k]} (${g[k].length}) ${ic(col ? 'chevD' : 'chevU', 18)}</div>${col ? '' : `<div class="glist" data-drow="task">${(k === 'done' ? g[k] : g[k].sort(srt)).map(t => rowHtml(t, k !== 'done' && k !== 'wait', k)).join('')}</div>`}`;
   }).join('');
   const link = list.some(t => t.done) ? `<button class="lnk" data-act="nav-page" data-v="completed">완료된 모든 작업 확인</button>` : '';
   if (!html) return `<div class="empty">${emptyArt}<div>${q ? '검색 결과가 없습니다.' : `이 카테고리에 작업이 없습니다.<br>'+' 버튼을 눌러 작업을 생성하세요.`}</div></div>${link}`;
@@ -863,6 +883,7 @@ function pageBody() {
     <div class="setrow"><div>데이터 가져오기<small>백업 파일 불러오기</small></div><button class="qbtn" data-act="import">가져오기</button></div>
     <div class="setrow"><div style="color:var(--danger)">모든 데이터 삭제<small>되돌릴 수 없어요</small></div><button class="qbtn" style="color:var(--danger)" data-act="reset">삭제</button></div></div>
     ${gcSettingsHtml()}
+    <div class="tsec" style="margin-top:18px">사용 팁</div><div class="card" style="padding:12px 18px"><div class="kv" style="line-height:1.6">작업 카드를 길게 누르면 순서 이동 손잡이가 나타나요. 누른 채로 위아래로 끌어 옮기세요.<br>카드를 왼쪽으로 밀면 별/날짜/집중/삭제 메뉴가 열려요.</div></div>
     <div class="tsec" style="margin-top:18px">홈 화면에 추가</div><div class="card" style="padding:12px 18px"><div class="kv" style="line-height:1.6">삼성 인터넷: 메뉴(≡) → 현재 페이지 추가 → 홈 화면<br>크롬: ⋮ → 홈 화면에 추가<br>카카오톡 등 앱 안에서 연 링크는 기능이 제한될 수 있어요. 우측 메뉴의 '다른 브라우저로 열기'로 크롬/삼성 인터넷에서 열어 주세요.</div></div>
     <div class="kv" style="text-align:center;margin-top:18px">데이터는 이 브라우저의 localStorage에만 저장돼요.</div>`;
   if (p === 'focus') {
@@ -1353,7 +1374,7 @@ if (gcid()) {
 setInterval(checkReminders, 15000);
 
 /* ---------- 이벤트 ---------- */
-let moved = false;
+let moved = false, lpOn = false;
 function renameCat(v) {
   askText('카테고리 이름 변경', v, n => {
     if (n !== v && S.cats.includes(n)) { toast('이미 있는 카테고리예요'); return false; }
@@ -1580,9 +1601,25 @@ $('#importfile').addEventListener('change', e => {
 
 /* ---------- 손잡이로 순서 바꾸기 (작업 목록 / 하위 작업) ---------- */
 (() => {
-  let d = null;
+  let d = null, lp = null;
+  const lpCancel = () => { if (lp) { clearTimeout(lp.t); lp = null; } };
+  document.addEventListener('touchmove', e => { if (d && d.lp) e.preventDefault(); }, { passive: false });
+  document.addEventListener('contextmenu', e => { if (e.target.closest('.row > .fg')) e.preventDefault(); });
   document.addEventListener('pointerdown', e => {
-    const g = e.target.closest('.grip'); if (!g) return;
+    if (!e.target.closest('.grip')) {
+      const fg = e.target.closest('.row > .fg'), row0 = fg && fg.parentNode;
+      if (!fg || !row0.dataset.lp || e.target.closest('.chk, .medalbtn, .badge, .sub') || fg.classList.contains('open') || (e.pointerType === 'mouse' && e.button)) return;
+      lp = { fg, row: row0, x: e.clientX, y: e.clientY, id: e.pointerId };
+      lp.t = setTimeout(() => {
+        const l = lp; lp = null; if (!l) return;
+        lpOn = true;
+        d = { row: l.row, list: l.row.parentNode, y: l.y, kind: 'task', moved: false, lp: true };
+        l.row.classList.add('lift'); try { l.fg.setPointerCapture(l.id); } catch (x) {}
+        if (navigator.vibrate) navigator.vibrate(15);
+      }, 450);
+      return;
+    }
+    const g = e.target.closest('.grip');
     const row = g.closest('.row, .subedit, .catrow, .strow'), list = row && row.parentNode;
     if (!row || !list || !list.dataset.drow) return;
     d = { row, list, y: e.clientY, kind: list.dataset.drow, moved: false };
@@ -1590,6 +1627,7 @@ $('#importfile').addEventListener('change', e => {
     e.preventDefault();
   });
   document.addEventListener('pointermove', e => {
+    if (lp && (Math.abs(e.clientX - lp.x) > 8 || Math.abs(e.clientY - lp.y) > 8)) lpCancel();
     if (!d) return;
     let dy = e.clientY - d.y;
     if (Math.abs(dy) > 3) d.moved = true;
@@ -1604,9 +1642,11 @@ $('#importfile').addEventListener('change', e => {
     if (sc) { const r = sc.getBoundingClientRect(); if (e.clientY < r.top + 50) sc.scrollTop -= 8; else if (e.clientY > r.bottom - 50) sc.scrollTop += 8; }
   });
   const end = () => {
+    lpCancel();
     if (!d) return;
-    const { row, list, kind, moved: mv } = d; d = null;
+    const { row, list, kind, moved: mv, lp: wasLp } = d; d = null; lpOn = false;
     row.classList.remove('lift'); row.style.transform = '';
+    if (wasLp) { moved = true; setTimeout(() => moved = false, 60); }
     if (!mv) return;
     moved = true; setTimeout(() => moved = false, 60);
     if (kind === 'task') {
@@ -1636,7 +1676,7 @@ $('#importfile').addEventListener('change', e => {
     st = { fg, x: e.clientX, y: e.clientY, base: fg.classList.contains('open') ? -MAX : 0, dx: 0, active: false, id: fg.dataset.id };
   });
   document.addEventListener('pointermove', e => {
-    if (!st) return;
+    if (!st || lpOn) return;
     const dx = e.clientX - st.x, dy = e.clientY - st.y;
     if (!st.active) { if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { st.active = true; st.fg.classList.add('drag'); try { st.fg.setPointerCapture(e.pointerId); } catch (x) {} } else return; }
     st.dx = dx; st.fg.parentNode.classList.add('swiped');
