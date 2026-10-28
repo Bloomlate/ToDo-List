@@ -18,10 +18,14 @@ input,select,textarea{font:inherit;color:inherit}
 @media(min-width:500px){.app{height:min(calc(100dvh - 40px),860px);margin:20px auto;border-radius:28px;box-shadow:0 20px 60px rgba(30,60,90,.25)}}
 .ic{flex:none;display:block}
 #topbar{flex:none;min-height:56px;padding:10px 12px 4px;display:flex;align-items:center;gap:8px}
-.chips{display:flex;gap:10px;overflow-x:auto;flex:1;scrollbar-width:none;padding:2px 0}
+.chips{display:flex;gap:10px;overflow-x:auto;flex:1;scrollbar-width:none;padding:6px 6px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;padding:8px 18px;border-radius:20px;background:var(--chip);color:var(--sub);font-size:15px}
 .chip.sel{background:var(--chipsel);color:var(--primary);font-weight:700}
+.chip.cc{background:color-mix(in srgb,var(--cc) 30%,var(--bg));color:var(--text)}
+.chip.cc.sel{background:var(--cc);color:var(--ct);font-weight:700;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--cc),0 3px 8px rgba(0,0,0,.22)}
+.chip.cc.all{--cc:var(--primary);--ct:#fff}
+.row .cbar{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cb);z-index:1;pointer-events:none}
 .chip.add{padding:8px 12px}
 .iconbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--sub);flex:none}
 .iconbtn:active{background:var(--chip)}
@@ -363,6 +367,8 @@ const MEDAL = { 1: ['#e53935', '#f6b73c', '#b57a00'], 2: ['#3f7fe0', '#aab4c0', 
 const medal = (r, s = 30) => { const [rb, c, d] = MEDAL[r]; return `<svg class="medal" width="${s}" height="${s}" viewBox="0 0 32 32"><path d="M8 1h7l4 11h-7z" fill="${rb}"/><path d="M24 1h-7l-4 11h7z" fill="${rb}" opacity=".85"/><circle cx="16" cy="21" r="9.5" fill="${c}" stroke="${d}" stroke-width="1.2"/><text x="16" y="25" text-anchor="middle" font-size="11.5" font-weight="800" fill="#fff" stroke="${d}" stroke-width=".4">${r}</text></svg>`; };
 const SORTS = { manual: '직접 정렬', date: '날짜순', prio: '우선순위순', created: '생성순' };
 const CATCOL = ['#0a8cff', '#7c6cf0', '#f06292', '#ffb300', '#26a69a', '#ef6c00', '#8d6e63', '#78909c'];
+const catColor = c => { const i = S.cats.indexOf(c); return i < 0 ? null : CATCOL[i % CATCOL.length]; };
+const textOn = hex => { const n = parseInt(hex.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; return l > 0.62 ? '#1d232b' : '#fff'; };
 const ACCENTS = [['파랑', '#0a8cff'], ['하늘', '#2bb3e6'], ['남색', '#3f5bd8'], ['청록', '#12a3a0']];
 
 /* ---------- 아이콘 ---------- */
@@ -542,7 +548,7 @@ function renderTop() {
   let h = '';
   if (ui.tab === 'tasks') {
     h = `<div class="iconbtn" style="display:none"></div><div class="chips">
-      ${['모두', ...S.cats].map(c => `<button class="chip ${ui.cat === c ? 'sel' : ''}" data-act="cat" data-v="${esc(c)}">${esc(c)}</button>`).join('')}
+      ${['모두', ...S.cats].map(c => { const k = catColor(c); return `<button class="chip cc ${k ? '' : 'all'} ${ui.cat === c ? 'sel' : ''}" ${k ? `style="--cc:${k};--ct:${textOn(k)}"` : ''} data-act="cat" data-v="${esc(c)}">${esc(c)}</button>`; }).join('')}
       <button class="chip add" data-act="cat-add" aria-label="카테고리 추가">${ic('plus', 18)}</button></div>
       <button class="iconbtn" data-act="menu-toggle" aria-label="메뉴">${ic('dots')}</button>`;
   } else if (ui.tab === 'cal') {
@@ -571,10 +577,10 @@ function renderNav() {
 /* ---------- 렌더: 작업 행 ---------- */
 function rowHtml(t, grip) {
   const meta = [];
-  const td = today();
-  if (t.date && t.date !== td) meta.push(`<span class="m ${t.date < td && !t.done ? 'late' : ''}">${ic('cal', 13)}${t.date.slice(5).replace('-', '/')}</span>`);
+  const td = today(), g = t.done ? '' : groupOf(t);
+  if (t.date && g !== 'today' && g !== 'tomorrow' && t.date !== td) meta.push(`<span class="m ${t.date < td && !t.done ? 'late' : ''}">${ic('cal', 13)}${t.date.slice(5).replace('-', '/')}</span>`);
   if (t.time) meta.push(`<span class="m">${t.time}</span>`);
-  if (t.cat) meta.push(`<span class="m">${esc(t.cat)}</span>`);
+  else if (t.date) meta.push(`<span class="m">시간 지정 없음</span>`);
   if (t.repeat && t.repeat !== 'none') meta.push(`<span class="m">${ic('repeat', 13)}${{ daily: '매일', weekly: '매주', monthly: '매월' }[t.repeat]}</span>`);
   if (remList(t).length) meta.push(`<span class="m">${ic('bell', 13)}</span>`);
   const left = t.subs.filter(s => !s.done).length, isOpen = S.openSubs ? ui.expanded[t.id] !== false : !!ui.expanded[t.id];
@@ -587,7 +593,7 @@ function rowHtml(t, grip) {
       <button class="a-focus" data-act="focus-task" data-id="${t.id}">${ic('hourglass', 24)}집중</button>
       <button class="a-del" data-act="del" data-id="${t.id}">${ic('trash', 24)}삭제</button></div>
     <div class="fg ${ui.openRow === t.id ? 'open' : ''}" data-act="edit" data-id="${t.id}">
-      <button class="chk ${t.done ? 'on' : ''}" data-act="done" data-id="${t.id}" aria-label="완료">${t.done ? ic('check', 14) : ''}</button>
+      ${catColor(t.cat) ? `<i class="cbar" style="--cb:${catColor(t.cat)}"></i>` : ''}<button class="chk ${t.done ? 'on' : ''}" data-act="done" data-id="${t.id}" aria-label="완료">${t.done ? ic('check', 14) : ''}</button>
       <div class="body"><div class="t">${t.star ? `<span class="star-on" style="margin-right:4px">★</span>` : ''}${esc(t.title)}</div>${meta.length ? `<div class="meta">${meta.join('')}</div>` : ''}${subs}</div>
       <div class="rt"><button class="medalbtn" data-act="prio-pick" data-id="${t.id}" aria-label="우선순위 ${t.prio}순위">${medal(t.prio || 3)}</button>${badge}${grip ? `<span class="grip" data-act="noop" aria-label="순서 변경">${ic('grab', 22)}</span>` : ''}</div>
     </div></div>`;
