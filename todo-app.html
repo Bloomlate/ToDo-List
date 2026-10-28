@@ -359,7 +359,7 @@ const today = () => ymd(new Date());
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
-const MEDAL = { 1: ['#e53935', '#f6b73c', '#b57a00'], 2: ['#3f7fe0', '#aab4c0', '#6d7885'], 3: ['#ef7c1c', '#cd7f3e', '#8a4a1c'] };
+const MEDAL = { 1: ['#e53935', '#f6b73c', '#b57a00'], 2: ['#3f7fe0', '#aab4c0', '#6d7885'], 3: ['#1f9d6b', '#3cc38a', '#14724c'] };
 const medal = (r, s = 30) => { const [rb, c, d] = MEDAL[r]; return `<svg class="medal" width="${s}" height="${s}" viewBox="0 0 32 32"><path d="M8 1h7l4 11h-7z" fill="${rb}"/><path d="M24 1h-7l-4 11h7z" fill="${rb}" opacity=".85"/><circle cx="16" cy="21" r="9.5" fill="${c}" stroke="${d}" stroke-width="1.2"/><text x="16" y="25" text-anchor="middle" font-size="11.5" font-weight="800" fill="#fff" stroke="${d}" stroke-width=".4">${r}</text></svg>`; };
 const SORTS = { manual: '직접 정렬', date: '날짜순', prio: '우선순위순', created: '생성순' };
 const CATCOL = ['#0a8cff', '#7c6cf0', '#f06292', '#ffb300', '#26a69a', '#ef6c00', '#8d6e63', '#78909c'];
@@ -416,6 +416,7 @@ function load() {
     const s = JSON.parse(localStorage.getItem(KEY));
     if (s && Array.isArray(s.tasks)) {
       const r = Object.assign(defaults(), s);
+      if (r.theme !== 'dark') r.theme = 'light'; /* 예전 '시스템' 설정은 라이트로 */
       if ((s.ver || 1) < 2) { /* 예전 우선순위(0~3, 3=높음)를 1~3순위(1=가장 높음)로 변환 */
         r.tasks.forEach(t => { t.prio = { 2: 2, 3: 1 }[t.prio] || 3; });
         r.sort = 'manual'; r.ver = 2;
@@ -433,6 +434,21 @@ const ui = {
   search: '', searchOpen: false, menu: false, drawer: false, drawerCats: false, openRow: null, collapsed: {}, expanded: {},
   draft: null, heatYear: new Date().getFullYear(), doneMode: 'done', doneRange: 30, barWeek: 0, focusWeek: 0
 };
+/* 마지막 화면 상태(탭, 카테고리, 접힌 목록) 복원 */
+const VKEY = 'todo-app-view';
+try {
+  const v = JSON.parse(localStorage.getItem(VKEY));
+  if (v) {
+    if (v.collapsed && typeof v.collapsed === 'object') ui.collapsed = v.collapsed;
+    if (v.cat === '모두' || S.cats.includes(v.cat)) ui.cat = v.cat;
+    if (['tasks', 'cal', 'me'].includes(v.tab)) ui.tab = v.tab;
+  }
+} catch (e) {}
+let lastView = '';
+function saveView() {
+  const j = JSON.stringify({ cat: ui.cat, tab: ui.tab, collapsed: ui.collapsed });
+  if (j !== lastView) { lastView = j; try { localStorage.setItem(VKEY, j); } catch (e) {} }
+}
 const F = { mode: 'timer', dur: S.focusDur || 15, left: (S.focusDur || 15) * 60, running: false, endAt: 0, base: 0, t0: 0, taskId: '', sound: true };
 const fElapsed = () => F.base + (F.running ? (Date.now() - F.t0) / 1000 : 0);
 const fStarted = () => F.running || (F.mode === 'timer' ? F.left < F.dur * 60 : F.base > 0);
@@ -469,7 +485,7 @@ const scImg = x => `url('images/scene-${x[4]}.jpg')`;
 const SCI = Object.fromEntries(SCN.map(x => [x[0], x]));
 const bgOf = b => b.t === 'scene' && SCI[b.id] ? scImg(SCI[b.id]) : b.t === 'tex' && TEX[+b.id] ? TEX[+b.id][0] : b.t === 'custom' && S.customBg ? `url("${S.customBg}")` : '';
 function applyTheme() {
-  const dark = S.theme === 'dark' || (S.theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const dark = S.theme === 'dark';
   const b = S.bg || { t: 'color' }, img = bgOf(b), root = document.documentElement.style;
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   root.setProperty('--primary', S.accent);
@@ -728,7 +744,7 @@ function pageBody() {
   }
   if (p === 'starred') { const l = S.tasks.filter(t => t.star).sort((a, b) => (a.done - b.done) || sortFn(a, b)); return l.length ? l.map(t => rowHtml(t)).join('') : `<div class="empty">${emptyArt}<div>별표 작업이 없습니다.<br>작업을 왼쪽으로 밀어 별을 눌러 보세요.</div></div>`; }
   if (p === 'cats') return `<div class="addrow"><input class="field" id="newcat" placeholder="새 카테고리 이름" maxlength="20"><button class="btn pri" style="flex:none;padding:0 20px" data-act="cat-new">추가</button></div>
-    <div class="card" style="padding:6px 18px">${S.cats.length ? S.cats.map(c => `<div class="catrow"><span class="nm">${esc(c)} <small style="color:var(--sub)">(${S.tasks.filter(t => t.cat === c).length})</small></span><button class="iconbtn" data-act="cat-rename" data-v="${esc(c)}" aria-label="이름 변경">${ic('edit', 20)}</button><button class="iconbtn" data-act="cat-del" data-v="${esc(c)}">${ic('trash', 20)}</button></div>`).join('') : '<div class="kv" style="padding:14px 0">카테고리가 없습니다.</div>'}</div>`;
+    <div class="card" style="padding:6px 18px">${S.cats.length ? S.cats.map((c, i) => `<div class="catrow"><button class="iconbtn" data-act="cat-up" data-v="${esc(c)}" aria-label="위로" ${i ? '' : 'disabled style="opacity:.25"'}>${ic('chevU', 20)}</button><button class="iconbtn" data-act="cat-dn" data-v="${esc(c)}" aria-label="아래로" ${i < S.cats.length - 1 ? '' : 'disabled style="opacity:.25"'}>${ic('chevD', 20)}</button><span class="nm">${esc(c)} <small style="color:var(--sub)">(${S.tasks.filter(t => t.cat === c).length})</small></span><button class="iconbtn" data-act="cat-rename" data-v="${esc(c)}" aria-label="이름 변경">${ic('edit', 20)}</button><button class="iconbtn" data-act="cat-del" data-v="${esc(c)}">${ic('trash', 20)}</button></div>`).join('') : '<div class="kv" style="padding:14px 0">카테고리가 없습니다.</div>'}</div>`;
   if (p === 'habitlist') return HCATS.map(([c, l], ci) => `<div class="hsec">${c}</div>${l.map((x, ii) => `<button class="hitem" data-act="habit-pick" data-v="${ci}.${ii}"><span class="em">${x[0]}</span><span class="tt">${x[1]}</span>${x[2] ? '<span>🔥</span>' : ''}${x[3] ? '<span class="hbadge">NEW</span>' : ''}<span style="color:var(--sub)">›</span></button>`).join('')}`).join('') + `<button class="hlink" data-act="habit-req"><u>여기를 눌러</u> 원하는 습관을 알려주세요.</button>`;
   if (p === 'habitnew') {
     const d = ui.hd, x = HCATS[d.ci][1][d.ii];
@@ -749,7 +765,7 @@ function pageBody() {
   if (p === 'theme') {
     const bg = S.bg || { t: 'color' }, ck = `<span class="tck">${ic('check', 14)}</span>`, isC = c => (bg.t || 'color') === 'color' && S.accent === c;
     const chip = ([n, c]) => `<button class="tchip" style="background:${c}" data-act="bg-set" data-v="color:${c}" aria-label="${n}">${isC(c) ? ck : ''}</button>`;
-    return `<div class="card"><h3>화면 모드</h3><div class="themeopts">${[['light', '라이트', 'sun'], ['dark', '다크', 'moon'], ['system', '시스템', 'gear']].map(([v, l, i]) => `<button class="${S.theme === v ? 'sel' : ''}" data-act="theme-set" data-v="${v}">${ic(i, 26)}${l}</button>`).join('')}</div></div>
+    return `<div class="card"><h3>화면 모드</h3><div class="themeopts">${[['light', '라이트', 'sun'], ['dark', '다크', 'moon']].map(([v, l, i]) => `<button class="${S.theme === v ? 'sel' : ''}" data-act="theme-set" data-v="${v}">${ic(i, 26)}${l}</button>`).join('')}</div></div>
     <div class="tsec">순수한 색상</div><div class="cg">${COLORS.slice(0, 4).map(chip).join('')}</div><div class="cbox"><div class="cg">${COLORS.slice(4).map(chip).join('')}</div></div>
     <div class="tsec">텍스처</div><div class="tg">${TEX.map((t, i) => `<button class="ttex ${bg.t === 'tex' && +bg.id === i ? 'sel' : ''}" style="background-image:${t[0]}" data-act="bg-set" data-v="tex:${i}" aria-label="텍스처 ${i + 1}"><i><b style="background:${t[1]}"></b></i>${bg.t === 'tex' && +bg.id === i ? ck : ''}</button>`).join('')}</div>
     <div class="tsec">풍경</div><div class="sg">${SCN.map(x => { const on = bg.t === 'scene' && bg.id === x[0]; return `<button class="tsc ${on ? 'sel' : ''}" style="background-image:${scImg(x)}" data-act="bg-set" data-v="scene:${x[0]}" aria-label="${x[1]}">${on ? ck : ''}</button>`; }).join('')}</div>
@@ -957,7 +973,7 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 
 /* ---------- 전체 렌더 ---------- */
 function render() {
-  applyTheme(); renderTop(); renderNav(); renderMain(); renderPage(); renderDrawer(); renderSheet(); renderPrio();
+  saveView(); applyTheme(); renderTop(); renderNav(); renderMain(); renderPage(); renderDrawer(); renderSheet(); renderPrio();
 }
 
 /* ---------- 집중 사운드 (WebAudio로 합성, 파일 없이 동작) ---------- */
@@ -1130,7 +1146,7 @@ document.addEventListener('click', e => {
     case 'del': delTask(id); toast('삭제했어요'); break;
     case 'sub-expand': { const w = b.closest('.row').querySelector('.subwrap'); if (w) { const o = !w.classList.contains('open'); w.classList.toggle('open', o); ui.expanded[id] = o; } break; }
     case 'sub-toggle': { const t = byId(id), s = t.subs[+b.dataset.i]; s.done = !s.done; save(); render(); break; }
-    case 'grp': ui.collapsed[v] = !ui.collapsed[v]; renderMain(); break;
+    case 'grp': ui.collapsed[v] = !ui.collapsed[v]; saveView(); renderMain(); break;
     case 'cal-prev': ui.cal.m--; if (ui.cal.m < 0) { ui.cal.m = 11; ui.cal.y--; } render(); break;
     case 'cal-next': ui.cal.m++; if (ui.cal.m > 11) { ui.cal.m = 0; ui.cal.y++; } render(); break;
     case 'cal-today': ui.cal = { y: new Date().getFullYear(), m: new Date().getMonth() }; ui.selDate = today(); render(); break;
@@ -1194,8 +1210,9 @@ document.addEventListener('click', e => {
     case 'reset': modal('모든 데이터 삭제', '작업, 습관, 집중 기록이 모두 지워지고 되돌릴 수 없어요. 계속할까요?', () => { localStorage.removeItem(KEY); S = defaults(); ui.page = null; render(); toast('초기화했어요'); }, '삭제'); break;
     /* 카테고리 관리 */
     case 'cat-new': { const i = $('#newcat'), n = i.value.trim(); if (n && !S.cats.includes(n)) { S.cats.push(n); save(); render(); } else if (n) toast('이미 있는 카테고리예요'); break; }
+    case 'cat-up': case 'cat-dn': { const i = S.cats.indexOf(v), j = i + (act === 'cat-up' ? -1 : 1); if (i < 0 || j < 0 || j >= S.cats.length) break; [S.cats[i], S.cats[j]] = [S.cats[j], S.cats[i]]; save(); render(); break; }
     case 'cat-rename': renameCat(v); break;
-    case 'cat-del': modal('카테고리 삭제', `'${esc(v)}' 카테고리를 삭제할까요? 속한 작업은 카테고리 없음으로 바뀌어요.`, () => { S.cats = S.cats.filter(c => c !== v); S.tasks.forEach(t => { if (t.cat === v) t.cat = ''; }); if (ui.cat === v) ui.cat = '모두'; save(); render(); }, '삭제'); break;
+    case 'cat-del': modal('카테고리 삭제', `'${esc(v)}' 카테고리를 삭제할까요?<br>이 카테고리의 작업 ${S.tasks.filter(t => t.cat === v).length}개는 삭제되지 않고 '카테고리 없음'(모두 탭에서 확인)으로 옮겨져요.`, () => { S.cats = S.cats.filter(c => c !== v); S.tasks.forEach(t => { if (t.cat === v) t.cat = ''; }); if (ui.cat === v) ui.cat = '모두'; save(); render(); }, '삭제'); break;
     /* 습관 */
     case 'habit-new': ui.page = 'habitlist'; renderPage(); break;
     case 'habit-pick': { const [ci, ii] = v.split('.').map(Number), x = HCATS[ci][1][ii]; ui.hd = { ci, ii, cat: HCATS[ci][0], msg: x[1], days: [1, 2, 3, 4, 5], times: ['08:00'] }; ui.page = 'habitnew'; renderPage(); break; }
@@ -1368,7 +1385,6 @@ $('#importfile').addEventListener('change', e => {
   document.addEventListener('pointercancel', end);
 })();
 
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.theme === 'system') render(); });
 render(); checkReminders();
 </script>
 </body>
