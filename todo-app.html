@@ -327,6 +327,12 @@ input,select,textarea{font:inherit;color:inherit}
 .hd{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--sub)}
 .hd .chk{width:24px;height:24px}
 .catrow{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.strow{display:flex;align-items:flex-start;gap:10px;background:var(--card);border-radius:14px;padding:12px;margin-bottom:8px}
+.strow .bd{flex:1;min-width:0}.strow .bd b{display:block;font-weight:500;font-size:16px;word-break:break-word}
+.strow .bd small{display:block;color:var(--sub);margin-top:2px;white-space:pre-wrap;word-break:break-word}
+.strow.done .bd b{text-decoration:line-through;color:var(--sub)}
+.strow .ssub{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:14px;text-align:left}.strow .ssub .chk{width:18px;height:18px;border-width:1.5px;margin:0}
+.strow.lift{position:relative;z-index:5;box-shadow:0 8px 22px rgba(0,0,0,.22);transition:none}
 .catrow:last-child{border:0}.catrow .nm{flex:1}
 .addrow{display:flex;gap:8px;margin-bottom:12px}.addrow input{flex:1}
 </style>
@@ -408,12 +414,13 @@ const ic = (n, s = 22, extra = '') => `<svg class="ic ${extra}" width="${s}" hei
 const navIc = {
   tasks: `<svg class="ic" width="28" height="28" viewBox="0 0 24 24"><rect x="3.5" y="2.5" width="17" height="19" rx="3.5" fill="currentColor"/><path d="M8 9h8M8 13h8M8 17h4" stroke="var(--nav)" stroke-width="1.8" stroke-linecap="round"/></svg>`,
   cal: `<svg class="ic" width="28" height="28" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3.5" fill="currentColor"/><path d="M8 2v4M16 2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><text x="12" y="17.5" text-anchor="middle" font-size="11" font-weight="700" fill="var(--nav)">${new Date().getDate()}</text></svg>`,
+  store: `<svg class="ic" width="28" height="28" viewBox="0 0 24 24"><path d="M3 8.5L12 3l9 5.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" fill="currentColor"/><path d="M8 21v-7h8v7" stroke="var(--nav)" stroke-width="1.8" fill="none" stroke-linejoin="round"/></svg>`,
   me: `<svg class="ic" width="28" height="28" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.6" fill="currentColor"/><path d="M3.5 21c0-4.6 3.8-7 8.5-7s8.5 2.4 8.5 7z" fill="currentColor"/></svg>`
 };
 
 /* ---------- 상태 / 저장 ---------- */
 const KEY = 'todo-app-v1';
-const defaults = () => ({ tasks: [], cats: ['작업', '개인', '위시리스트', '생일'], habits: [], focus: [], theme: 'light', accent: '#0a8cff', bg: { t: 'color' }, customBg: '', openSubs: false, sort: 'manual', seenDot: false, sound: 'none', autoSound: false, ver: 2 });
+const defaults = () => ({ tasks: [], cats: ['작업', '개인', '위시리스트', '생일'], habits: [], store: [], focus: [], theme: 'light', accent: '#0a8cff', bg: { t: 'color' }, customBg: '', openSubs: false, sort: 'manual', seenDot: false, sound: 'none', autoSound: false, ver: 2 });
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
@@ -444,7 +451,7 @@ try {
   if (v) {
     if (v.collapsed && typeof v.collapsed === 'object') ui.collapsed = v.collapsed;
     if (v.cat === '모두' || S.cats.includes(v.cat)) ui.cat = v.cat;
-    if (['tasks', 'cal', 'me'].includes(v.tab)) ui.tab = v.tab;
+    if (['tasks', 'store', 'cal', 'me'].includes(v.tab)) ui.tab = v.tab;
   }
 } catch (e) {}
 let lastView = '';
@@ -536,6 +543,18 @@ function sortFn(a, b) {
   if (S.sort === 'created') return a.created - b.created;
   return (a.date || '9999').localeCompare(b.date || '9999') || (a.time || '99').localeCompare(b.time || '99') || a.prio - b.prio || a.created - b.created;
 }
+/* 새로 추가하거나 날짜/시간을 바꾼 작업을 같은 묶음 안의 날짜→시간 순 위치에 끼워 넣는다(직접 옮긴 다른 항목의 순서는 그대로) */
+const dtKey = t => (t.date || '9999') + ' ' + (t.time || '99:99');
+function placeByDate(t) {
+  const g = groupOf(t);
+  const list = S.tasks.filter(x => x !== t && !x.done && groupOf(x) === g).sort((a, b) => (a.order || a.created) - (b.order || b.created));
+  const k = dtKey(t), i = list.findIndex(x => dtKey(x) > k);
+  const o = x => x.order || x.created;
+  if (!list.length) t.order = Date.now();
+  else if (i < 0) t.order = o(list[list.length - 1]) + 1;
+  else if (i === 0) t.order = o(list[0]) - 1;
+  else t.order = (o(list[i - 1]) + o(list[i])) / 2;
+}
 function nextDate(d, r) {
   const x = parse(d);
   if (r === 'daily') x.setDate(x.getDate() + 1);
@@ -549,7 +568,7 @@ function toggleDone(id) {
   if (t.done && t.repeat && t.repeat !== 'none') {
     let n = nextDate(t.date || today(), t.repeat);
     while (n <= today()) n = nextDate(n, t.repeat);
-    S.tasks.push({ ...t, id: uid(), date: n, done: false, doneAt: null, notified: false, created: Date.now(), order: Date.now(), subs: t.subs.map(s => ({ ...s, done: false })) });
+    S.tasks.push({ ...t, id: uid(), date: n, done: false, doneAt: null, notified: false, created: Date.now(), order: Date.now(), subs: t.subs.map(s => ({ ...s, done: false })) }); placeByDate(S.tasks[S.tasks.length - 1]);
     toast('다음 반복 작업이 ' + n.slice(5).replace('-', '/') + '에 추가되었어요');
   }
   save(); render();
@@ -564,6 +583,8 @@ function renderTop() {
       ${['모두', ...S.cats].map(c => `<button class="chip ${ui.cat === c ? 'sel' : ''}" data-act="cat" data-v="${esc(c)}">${esc(c)}</button>`).join('')}
       <button class="chip add" data-act="cat-add" aria-label="카테고리 추가">${ic('plus', 18)}</button></div>
       <button class="iconbtn" data-act="menu-toggle" aria-label="메뉴">${ic('dots')}</button>`;
+  } else if (ui.tab === 'store') {
+    h = `<div style="font-size:20px;font-weight:700;padding-left:6px;flex:1">창고</div>`;
   } else if (ui.tab === 'cal') {
     h = `<button class="iconbtn" data-act="cal-prev">${ic('chevL')}</button>
       <div class="calmonth" style="justify-content:center">${ui.cal.y}년 ${ui.cal.m + 1}월</div>
@@ -581,8 +602,8 @@ function renderTop() {
     <button data-act="menu-subs"><span>하위 작업 항상 펼치기</span><i class="switch ${S.openSubs ? 'on' : ''}"></i></button></div>` : '';
 }
 function renderNav() {
-  const items = [['menu', '', ic('menu', 28), 'drawer-open'], ['tasks', 'ToDo', navIc.tasks, 'tab'], ['cal', '캘린더', navIc.cal, 'tab'], ['me', '내 것', navIc.me, 'tab']];
-  $('#nav').innerHTML = items.map(([k, l, svg, act]) => `<button class="${act === 'tab' && ui.tab === (k === 'cal' ? 'cal' : k === 'me' ? 'me' : 'tasks') ? 'on' : ''}" data-act="${act}" data-v="${k}"><span class="${k === 'menu' && !S.seenDot ? 'dot' : ''}">${svg}</span>${l}</button>`).join('');
+  const items = [['menu', '', ic('menu', 28), 'drawer-open'], ['tasks', 'ToDo', navIc.tasks, 'tab'], ['store', '창고', navIc.store, 'tab'], ['cal', '캘린더', navIc.cal, 'tab'], ['me', '내 것', navIc.me, 'tab']];
+  $('#nav').innerHTML = items.map(([k, l, svg, act]) => `<button class="${act === 'tab' && ui.tab === (['cal', 'me', 'store'].includes(k) ? k : 'tasks') ? 'on' : ''}" data-act="${act}" data-v="${k}"><span class="${k === 'menu' && !S.seenDot ? 'dot' : ''}">${svg}</span>${l}</button>`).join('');
   $('#fab').innerHTML = ic('plus', 30);
   $('#fab').style.display = ui.tab === 'me' || ui.page ? 'none' : 'grid';
 }
@@ -628,6 +649,30 @@ function viewTasks() {
   return html + link;
 }
 
+/* ---------- 창고: 날짜·알림 없는 단순 할 일 목록(캘린더/통계와 별도 데이터 S.store) ---------- */
+function stRow(x) {
+  const sub = (x.subs || []).map((u, i) => `<div class="ssub"><button class="chk ${u.done ? 'on' : ''}" data-act="st-sub" data-id="${x.id}" data-i="${i}">${u.done ? ic('check', 12) : ''}</button><span style="${u.done ? 'text-decoration:line-through;color:var(--sub)' : ''}">${esc(u.t)}</span></div>`).join('');
+  return `<div class="strow ${x.done ? 'done' : ''}" data-id="${x.id}">${x.done ? '' : `<span class="grip" data-act="noop" aria-label="순서 변경">${ic('grab', 22)}</span>`}<button class="chk ${x.done ? 'on' : ''}" data-act="st-done" data-id="${x.id}" aria-label="완료">${x.done ? ic('check', 14) : ''}</button>
+    <div class="bd" data-act="st-edit" data-id="${x.id}"><b>${esc(x.t)}</b>${x.memo ? `<small>${esc(x.memo)}</small>` : ''}${sub}</div>
+    <button class="iconbtn" data-act="st-del" data-id="${x.id}" aria-label="삭제">${ic('trash', 20)}</button></div>`;
+}
+function viewStore() {
+  const open = S.store.filter(x => !x.done).sort((a, b) => a.order - b.order), done = S.store.filter(x => x.done);
+  if (!S.store.length) return `<div class="empty">${emptyArt}<div>창고가 비어 있어요.<br>'+' 버튼을 눌러 날짜 없이 쌓아 둘 일을 넣어 보세요.</div></div>`;
+  return `<div class="glist" data-drow="store">${open.map(stRow).join('')}</div>` + (done.length ? `<div class="grp" data-act="grp" data-v="stdone">완료 (${done.length}) ${ic(ui.collapsed.stdone ? 'chevD' : 'chevU', 18)}</div>${ui.collapsed.stdone ? '' : done.map(stRow).join('')}` : '');
+}
+function stEdit(id) {
+  const x = id && S.store.find(y => y.id === id);
+  modal(x ? '창고 항목 수정' : '창고에 추가', `<input class="field" id="st-t" style="width:100%" maxlength="120" placeholder="할 일" value="${esc(x ? x.t : '')}">
+    <textarea class="field" id="st-m" style="width:100%;margin-top:10px;min-height:70px" placeholder="메모">${esc(x ? x.memo || '' : '')}</textarea>
+    <textarea class="field" id="st-s" style="width:100%;margin-top:10px;min-height:70px" placeholder="하위 작업 (한 줄에 하나)">${esc(x ? (x.subs || []).map(u => u.t).join('\n') : '')}</textarea>`, () => {
+    const t = $('#st-t').value.trim(); if (!t) return false;
+    const memo = $('#st-m').value.trim(), old = x ? x.subs || [] : [];
+    const subs = $('#st-s').value.split('\n').map(l => l.trim()).filter(Boolean).map(l => ({ t: l, done: (old.find(u => u.t === l) || {}).done || false }));
+    if (x) Object.assign(x, { t, memo, subs }); else S.store.push({ id: uid(), t, memo, subs, done: false, order: Date.now() });
+    save(); renderMain();
+  }, '저장');
+}
 /* ---------- 렌더: 캘린더 ---------- */
 function viewCal() {
   const { y, m } = ui.cal;
@@ -718,7 +763,7 @@ function viewMe() {
 
 function renderMain() {
   const m = $('#main');
-  m.innerHTML = ui.tab === 'tasks' ? viewTasks() : ui.tab === 'cal' ? viewCal() : viewMe();
+  m.innerHTML = ui.tab === 'tasks' ? viewTasks() : ui.tab === 'store' ? viewStore() : ui.tab === 'cal' ? viewCal() : viewMe();
   if (ui.tab === 'me') { const h = $('#heatscroll'); if (h && ui.heatYear === new Date().getFullYear()) { const dd = new Date(); const col = Math.floor((Math.round((dd - new Date(dd.getFullYear(), 0, 1)) / 864e5) + new Date(dd.getFullYear(), 0, 1).getDay()) / 7); h.scrollLeft = Math.max(0, col * 16 - h.clientWidth / 2); } }
 }
 
@@ -872,8 +917,8 @@ function commitDraft() {
   const d = ui.draft; d.title = d.title.trim(); d.subs = d.subs.filter(s => s.t.trim());
   if (!d.title) return false;
   const rec = { ...d, remind: d.remind === '' ? '' : Number(d.remind), notified: false, nfired: [] };
-  if (d.id) { const i = S.tasks.findIndex(t => t.id === d.id); S.tasks[i] = { ...S.tasks[i], ...rec }; }
-  else { rec.id = uid(); rec.created = rec.order = Date.now(); rec.doneAt = null; S.tasks.push(rec); d.id = rec.id; }
+  if (d.id) { const i = S.tasks.findIndex(t => t.id === d.id), old = S.tasks[i], chg = old.date !== rec.date || old.time !== rec.time; S.tasks[i] = { ...old, ...rec }; if (chg && !rec.done) placeByDate(S.tasks[i]); }
+  else { rec.id = uid(); rec.created = Date.now(); rec.doneAt = null; S.tasks.push(rec); placeByDate(rec); d.id = rec.id; }
   if (rec.remind !== '' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().then(() => { if (ui.page === 'settings') renderPage(); });
   save(); return true;
 }
@@ -1127,7 +1172,7 @@ document.addEventListener('click', e => {
   if (act === 'edit') { if (ui.openRow === id) { ui.openRow = null; renderMain(); renderPage(); return; } return openSheet(id); }
   if (ui.openRow && !['star', 'date', 'focus-task', 'del', 'sub-expand'].includes(act)) { ui.openRow = null; }
   switch (act) {
-    case 'tab': ui.tab = v === 'cal' ? 'cal' : v === 'me' ? 'me' : 'tasks'; ui.menu = false; ui.page = null; render(); $('#main').scrollTop = 0; break;
+    case 'tab': ui.tab = ['cal', 'me', 'store'].includes(v) ? v : 'tasks'; ui.menu = false; ui.page = null; render(); $('#main').scrollTop = 0; break;
     case 'drawer-open': ui.drawer = true; S.seenDot = true; save(); renderDrawer(); renderNav(); break;
     case 'drawer-close': ui.drawer = false; renderDrawer(); break;
     case 'drawer-cats': ui.drawerCats = !ui.drawerCats; renderDrawer(); break;
@@ -1142,7 +1187,11 @@ document.addEventListener('click', e => {
     case 'search-close': ui.searchOpen = false; ui.search = ''; renderTop(); renderMain(); break;
     case 'menu-sort': ui.menu = false; renderTop(); modal('작업 정렬', Object.keys(SORTS).map(k => `<label style="display:flex;gap:12px;padding:10px 0"><input type="radio" name="srt" value="${k}" ${S.sort === k ? 'checked' : ''}>${SORTS[k]}</label>`).join('') + '<small style="color:var(--sub)">직접 정렬: 항목 오른쪽 손잡이를 끌어 순서를 바꿔요</small>', () => { S.sort = document.querySelector('input[name=srt]:checked').value; save(); render(); }); break;
     case 'menu-subs': S.openSubs = !S.openSubs; ui.expanded = {}; save(); if (!b.dataset.keep) ui.menu = true; render(); break;
-    case 'fab': openSheet(); break;
+    case 'fab': if (ui.tab === 'store') stEdit(); else openSheet(); break;
+    case 'st-edit': stEdit(id); break;
+    case 'st-done': { const x = S.store.find(y => y.id === id); if (x) { x.done = !x.done; if (!x.done) x.order = Date.now(); save(); renderMain(); } break; }
+    case 'st-sub': { const x = S.store.find(y => y.id === id), u = x && x.subs[+b.dataset.i]; if (u) { u.done = !u.done; save(); renderMain(); } break; }
+    case 'st-del': { const x = S.store.find(y => y.id === id); if (x) modal('창고 항목 삭제', `'${esc(x.t)}' 항목을 삭제할까요?`, () => { S.store = S.store.filter(y => y.id !== id); save(); renderMain(); }, '삭제'); break; }
     case 'done': toggleDone(id); break;
     case 'star': { const t = byId(id); t.star = !t.star; ui.openRow = null; save(); render(); break; }
     case 'date': ui.openRow = null; renderMain(); openDp('row', id); break;
@@ -1317,7 +1366,7 @@ $('#importfile').addEventListener('change', e => {
   let d = null;
   document.addEventListener('pointerdown', e => {
     const g = e.target.closest('.grip'); if (!g) return;
-    const row = g.closest('.row, .subedit, .catrow'), list = row && row.parentNode;
+    const row = g.closest('.row, .subedit, .catrow, .strow'), list = row && row.parentNode;
     if (!row || !list || !list.dataset.drow) return;
     d = { row, list, y: e.clientY, kind: list.dataset.drow, moved: false };
     row.classList.add('lift'); try { g.setPointerCapture(e.pointerId); } catch (x) {}
@@ -1348,6 +1397,9 @@ $('#importfile').addEventListener('change', e => {
       ids.forEach((id, i) => { const t = byId(id); if (t) t.order = base + i; });
       if (S.sort !== 'manual') { S.sort = 'manual'; toast('직접 정렬로 바꿨어요'); }
       save(); renderMain(); renderPage();
+    } else if (kind === 'store') {
+      const base = Date.now(); [...list.children].forEach((n, i) => { const x = S.store.find(y => y.id === n.dataset.id); if (x) x.order = base + i; });
+      save(); renderMain();
     } else if (kind === 'cat') {
       S.cats = [...list.children].map(n => S.cats[+n.dataset.i]); save(); render();
     } else if (ui.draft) {
