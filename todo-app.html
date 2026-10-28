@@ -261,11 +261,20 @@ input,select,textarea{font:inherit;color:inherit}
 .cbox{background:color-mix(in srgb,var(--text) 5%,var(--bg));border-radius:16px;padding:12px 6px;margin-top:12px}
 .tchip{aspect-ratio:1;border-radius:32%;position:relative;border:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
 .tck{position:absolute;right:-5px;bottom:-5px;width:22px;height:22px;border-radius:50%;background:#1e90ff;color:#fff;border:2px solid var(--bg);display:grid;place-items:center}
-.tg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 2px}
-.ttex{aspect-ratio:1/1.04;border-radius:12px;position:relative;border:1px solid var(--line);background-size:200px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:12%}
-.ttex i{width:26px;height:26px;border-radius:50%;background:rgba(150,150,150,.28);display:grid;place-items:center}
-.ttex i b{width:14px;height:14px;border-radius:50%;display:block}
-.ttex.sel{border:2px solid var(--primary)}
+.tg{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 12px;padding:0 2px}
+.ttw{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;padding:0}
+.ttw em{font-style:normal;font-size:14px;color:var(--sub)}
+.ttw.sel em{color:var(--text);font-weight:600}
+.ttex{width:100%;aspect-ratio:1.25;border-radius:14px;position:relative;border:1px solid var(--line);background-color:color-mix(in srgb,var(--primary) 6%,var(--bg));display:block}
+.ttex s{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(to top right,transparent calc(50% - 1px),var(--line) calc(50% - 1px),var(--line) calc(50% + 1px),transparent calc(50% + 1px))}
+.ttw.sel .ttex{border:2px solid var(--primary)}
+.txi{display:flex;align-items:center;gap:12px;margin:12px 2px 0;padding:6px 16px}
+.txi label{font-size:15px;font-weight:600;flex:none}
+.txi input{flex:1;min-width:0;height:44px;accent-color:var(--primary);margin:0}
+.txi b{flex:none;width:42px;text-align:right;font-size:14px;font-variant-numeric:tabular-nums;color:var(--sub)}
+.app[data-tex]{--sub:#454f5c}[data-theme=dark] .app[data-tex]{--sub:#bcc6d0}
+.app[data-tex] #page{background-color:var(--bgcol);background-image:var(--bgimg);background-size:var(--bgsize);background-repeat:repeat}
+.app[data-tex] #nav{background:color-mix(in srgb,var(--nav) 88%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .sg{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 2px}
 .tsc{aspect-ratio:1.58;border-radius:14px;position:relative;box-shadow:0 3px 8px rgba(30,40,60,.22);background-size:cover;background-position:center bottom;background-repeat:no-repeat;overflow:hidden}
 .tsc.sel{outline:3px solid var(--primary);outline-offset:1px}
@@ -527,8 +536,26 @@ const fStarted = () => F.running || (F.mode === 'timer' ? F.left < F.dur * 60 : 
 
 /* ---------- 테마 ---------- */
 const svgU = s => "url('data:image/svg+xml;utf8," + encodeURIComponent(s).replace(/'/g, '%27') + "')";
-const tex = (base, f, seed) => svgU(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="f"><feTurbulence type="fractalNoise" baseFrequency="${f}" numOctaves="3" seed="${seed}"/><feColorMatrix values="0 0 0 0 .45 0 0 0 0 .4 0 0 0 0 .35 0 0 0 .22 0"/></filter><rect width="200" height="200" fill="${base}"/><rect width="200" height="200" filter="url(#f)"/></svg>`);
-const TEX = [['#fbfbf8', .55, '#5b8def', 1], ['#f4efe6', .9, '#e05a5a', 2], ['#f1f3fb', .45, '#8c5ad8', 3], ['#f6f6f4', 1.3, '#1f9a74', 4]].map(([b, f, c, n]) => [tex(b, f, n), c]);
+/* 텍스처: 외부 이미지 없이 SVG(feTurbulence/도형)로 만든 투명 패턴. 잉크색=테마 포인트색을 중립색에 은은히 섞음, 강도=불투명도 */
+const mixHex = (a, b, t) => { const n = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const x = n(a), y = n(b); return '#' + x.map((v, i) => Math.round(v * t + y[i] * (1 - t)).toString(16).padStart(2, '0')).join(''); };
+const nz = (w, h, fr, oct, seed, K, B, ink, o) => { const [r, g, b] = [1, 3, 5].map(i => (parseInt(ink.slice(i, i + 2), 16) / 255).toFixed(3)); const id = 'n' + seed; return `<filter id="${id}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="${fr}" numOctaves="${oct}" seed="${seed}" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 ${r} 0 0 0 0 ${g} 0 0 0 0 ${b} ${K} 0 0 0 ${B}"/></filter><rect width="${w}" height="${h}" filter="url(#${id})" opacity="${o}"/>`; };
+/* [키, 이름, 타일 px, 최대 불투명도, SVG 본문 생성(ink, o)] */
+const TEXD = [
+  ['paper', '종이', 200, .3, (c, o) => nz(200, 200, '.8', 3, 1, 3.6, -1.15, c, o) + nz(200, 200, '.03', 2, 5, 3, -1.15, c, o * .5)],
+  ['linen', '린넨', 200, .3, (c, o) => nz(200, 200, '.03 .75', 2, 2, 4.5, -1.7, c, o) + nz(200, 200, '.75 .03', 2, 3, 4.5, -1.7, c, o)],
+  ['leather', '가죽', 200, .26, (c, o) => nz(200, 200, '.07', 2, 4, 14, -6.4, c, o) + nz(200, 200, '.55', 2, 6, 3, -1.1, c, o * .6)],
+  ['concrete', '콘크리트', 200, .3, (c, o) => nz(200, 200, '.018', 5, 7, 6, -2.5, c, o * .8) + nz(200, 200, '1.1', 1, 8, 7, -3.2, c, o)],
+  ['dots', '도트', 14, .4, (c, o) => `<circle cx="7" cy="7" r="1.7" fill="${c}" opacity="${o}"/>`],
+  ['grid', '격자', 22, .3, (c, o) => `<path d="M22 0V22M0 22H22" stroke="${c}" stroke-width="1.2" fill="none" opacity="${o}"/>`],
+  ['stripe', '사선', 12, .3, (c, o) => `<path d="M-3 3L3 -3M0 12L12 0M9 15L15 9" stroke="${c}" stroke-width="1.6" fill="none" opacity="${o}"/>`],
+  ['wave', '물결', 40, .35, (c, o) => `<path d="M0 10Q10 2 20 10T40 10" stroke="${c}" stroke-width="1.6" fill="none" opacity="${o}"/>`],
+];
+const TEXI = Object.fromEntries(TEXD.map(d => [d[0], d]));
+const texKey = id => TEXI[id] ? id : (TEXD[+id] || TEXD[0])[0];
+function texImg(key, int, dark, accent) {
+  const d = TEXI[key], ink = dark ? mixHex(accent, '#e8edf2', .18) : mixHex(accent, '#2a3038', .18), o = (d[3] * int / 100 * (dark ? .38 : .55)).toFixed(3);
+  return { img: svgU(`<svg xmlns="http://www.w3.org/2000/svg" width="${d[2]}" height="${d[2]}">${d[4](ink, o)}</svg>`), size: d[2] };
+}
 /* [id, 이름, 어두운 배경 여부, 포인트 색, 사진 파일, 위쪽 평균색] — 실제 사진(출처는 CREDITS.md) */
 const SCN = [
   ['bridge', '노을 다리', 0, '#e0568a', 'bridge', '#7a9bb8'],
@@ -554,26 +581,34 @@ const SCN = [
 ];
 const scImg = x => `url('images/scene-${x[4]}.jpg')`;
 const SCI = Object.fromEntries(SCN.map(x => [x[0], x]));
-const bgOf = b => b.t === 'scene' && SCI[b.id] ? scImg(SCI[b.id]) : b.t === 'tex' && TEX[+b.id] ? TEX[+b.id][0] : b.t === 'custom' && S.customBg ? `url("${S.customBg}")` : '';
+const bgOf = b => b.t === 'scene' && SCI[b.id] ? scImg(SCI[b.id]) : b.t === 'custom' && S.customBg ? `url("${S.customBg}")` : '';
 function applyTheme() {
   const dark = S.theme === 'dark';
   const b = S.bg || { t: 'color' }, img = bgOf(b), root = document.documentElement.style;
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   root.setProperty('--primary', S.accent);
   const appEl = document.querySelector('.app'); if (appEl) { if (img) appEl.setAttribute('data-photo', ''); else appEl.removeAttribute('data-photo'); }
+  if (appEl) { if (b.t === 'tex') appEl.setAttribute('data-tex', ''); else appEl.removeAttribute('data-tex'); }
+  if (b.t === 'tex') {
+    const t = texImg(texKey(b.id), S.texInt ?? 70, dark, S.accent);
+    root.setProperty('--bgimg', t.img); root.setProperty('--bgsize', t.size + 'px'); root.setProperty('--bgrep', 'repeat');
+    root.setProperty('--bgcol', 'color-mix(in srgb,var(--primary) ' + (dark ? 7 : 6) + '%,var(--bg))');
+    if (appEl) appEl.setAttribute('data-photo', '');
+    return;
+  }
   if (!img) { ['--bgimg', '--bgcol'].forEach(k => root.removeProperty(k)); return; }
   const sdark = b.t === 'scene' && SCI[b.id][2], a = dark ? (sdark ? .22 : b.t === 'tex' ? .9 : .55) : (sdark ? .7 : b.t === 'scene' ? .3 : .35);
   const ov = dark ? `rgba(10,14,20,${a})` : `rgba(255,255,255,${a})`;
   root.setProperty('--bgimg', `linear-gradient(${ov},${ov}),${img}`);
-  root.setProperty('--bgsize', b.t === 'tex' ? '100% 100%,200px' : b.t === 'scene' ? '100% 100%,cover' : '100% 100%,cover');
-  root.setProperty('--bgrep', b.t === 'tex' ? 'no-repeat,repeat' : 'no-repeat');
+  root.setProperty('--bgsize', '100% 100%,cover');
+  root.setProperty('--bgrep', 'no-repeat');
   if (b.t === 'scene') root.setProperty('--bgcol', SCI[b.id][5]); else root.removeProperty('--bgcol');
 }
 function setBg(v) {
   const i = v.indexOf(':'), t = i < 0 ? v : v.slice(0, i), id = i < 0 ? '' : v.slice(i + 1);
   S.bg = { t, id };
   if (t === 'color') S.accent = id;
-  else if (t === 'tex') S.accent = TEX[+id][1];
+  else if (t === 'tex') { S.bg = { t, id: id === 'none' ? '' : id }; if (id === 'none') S.bg = { t: 'color', id: S.accent }; }
   else if (t === 'scene') { S.accent = SCI[id][3]; if (SCI[id][2] && S.theme === 'light') S.theme = 'dark'; }
   save(); render();
 }
@@ -899,7 +934,8 @@ function pageBody() {
     const bg = S.bg || { t: 'color' }, ck = `<span class="tck">${ic('check', 14)}</span>`;
     return `<div class="card"><h3>화면 모드</h3><div class="themeopts">${[['light', '라이트', 'sun'], ['dark', '다크', 'moon']].map(([v, l, i]) => `<button class="${S.theme === v ? 'sel' : ''}" data-act="theme-set" data-v="${v}">${ic(i, 26)}${l}</button>`).join('')}</div></div>
     <div class="tsec">순수한 색상</div><div class="card" style="padding:14px 10px">${colorPalette((bg.t || 'color') === 'color' ? S.accent : '', 'bg-set-col', 'theme-custom', 'inpage')}</div>
-    <div class="tsec">텍스처</div><div class="tg">${TEX.map((t, i) => `<button class="ttex ${bg.t === 'tex' && +bg.id === i ? 'sel' : ''}" style="background-image:${t[0]}" data-act="bg-set" data-v="tex:${i}" aria-label="텍스처 ${i + 1}"><i><b style="background:${t[1]}"></b></i>${bg.t === 'tex' && +bg.id === i ? ck : ''}</button>`).join('')}</div>
+    <div class="tsec">텍스처</div><div class="tg">${[['none', '없음']].concat(TEXD.map(d => [d[0], d[1]])).map(([k, n]) => { const on = k === 'none' ? bg.t !== 'tex' : bg.t === 'tex' && texKey(bg.id) === k, im = k === 'none' ? null : texImg(k, 100, S.theme === 'dark', S.accent); return `<button class="ttw ${on ? 'sel' : ''}" data-act="bg-set" data-v="tex:${k}" aria-label="텍스처 ${n}"><span class="ttex" style="${im ? `background-image:${im.img};background-size:${im.size}px` : ''}">${k === 'none' ? '<s></s>' : ''}${on ? ck : ''}</span><em>${n}</em></button>`; }).join('')}</div>
+    <div class="card txi"><label for="texint">강도</label><input type="range" id="texint" data-tx="1" min="0" max="100" step="1" value="${S.texInt ?? 70}" aria-label="텍스처 강도"><b id="texv">${S.texInt ?? 70}%</b></div>
     <div class="tsec">풍경</div><div class="sg">${SCN.map(x => { const on = bg.t === 'scene' && bg.id === x[0]; return `<button class="tsc ${on ? 'sel' : ''}" style="background-image:${scImg(x)}" data-act="bg-set" data-v="scene:${x[0]}" aria-label="${x[1]}">${on ? ck : ''}</button>`; }).join('')}</div>
     <div class="tsec">맞춤설정</div><div class="sg">${S.customBg ? `<button class="tsc ${bg.t === 'custom' ? 'sel' : ''}" style="background-image:url(&quot;${S.customBg}&quot;)" data-act="bg-set" data-v="custom" aria-label="내 사진">${bg.t === 'custom' ? ck : ''}</button>` : ''}<button class="tsc tadd" data-act="bg-add" aria-label="내 사진 추가">${ic('plus', 36)}</button></div>`;
   }
@@ -1633,6 +1669,7 @@ document.addEventListener('click', e => {
   if (ui.openRow === null) { /* 닫힘 상태 반영 */ }
 });
 document.addEventListener('input', e => {
+  if (e.target.dataset.tx) { S.texInt = Math.round(+e.target.value); const v = document.getElementById('texv'); if (v) v.textContent = S.texInt + '%'; applyTheme(); return; }
   if (e.target.dataset.tm) { ui.tmin = Math.round(+e.target.value) || 0; return; }
   if (e.target.dataset.si !== undefined && ui.draft) { ui.draft.subs[+e.target.dataset.si].t = e.target.value; return; }
   const f = e.target.dataset.f; if (!f) return;
@@ -1641,6 +1678,7 @@ document.addEventListener('input', e => {
   if (ui.draft) ui.draft[f] = e.target.value;
 });
 document.addEventListener('change', e => {
+  if (e.target.dataset.tx) { save(); return; }
   const t = e.target, f = t.dataset.f, c = t.dataset.chg;
   if (f && ui.draft) { ui.draft[f] = t.value; if (f === 'date' || f === 'time') renderSheet(); return; }
   if (c === 'heatYear') { ui.heatYear = +t.value; renderMain(); }
